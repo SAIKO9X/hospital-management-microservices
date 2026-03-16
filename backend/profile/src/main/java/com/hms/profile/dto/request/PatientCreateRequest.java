@@ -1,5 +1,7 @@
 package com.hms.profile.dto.request;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.hms.common.util.DataMaskingSerializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -8,6 +10,7 @@ public record PatientCreateRequest(
   Long userId,
 
   @NotBlank(message = "O CPF é obrigatório.")
+  @JsonSerialize(using = DataMaskingSerializer.class)
   String cpf,
 
   @NotBlank(message = "O nome do doutor é obrigatório.")

@@ -1,5 +1,7 @@
 package com.hms.profile.dto.event;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.hms.common.util.DataMaskingSerializer;
 import java.io.Serializable;
 import java.time.LocalDate;
 
@@ -14,6 +16,7 @@ public record UserUpdatedEvent(
   LocalDate dateOfBirth,
 
   // Campos de Paciente
+  @JsonSerialize(using = DataMaskingSerializer.class)
   String cpf,
   String address,
   String emergencyContactName,

@@ -1,5 +1,7 @@
 package com.hms.user.dto.request;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.hms.common.util.DataMaskingSerializer;
 import com.hms.user.entities.User;
 import com.hms.user.enums.UserRole;
 import jakarta.validation.constraints.Email;
@@ -13,10 +15,12 @@ public record UserRequest(
   @Email(message = "O email deve ser válido")
   String email,
 
+  @NotBlank(message = "A senha é obrigatória.")
   @Pattern(
-    regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d]{8,}$",
-    message = "A senha deve ter no mínimo 8 caracteres, incluindo uma letra maiúscula, uma minúscula e um número."
+    regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$",
+    message = "A senha deve conter pelo menos 8 caracteres, uma letra maiúscula, uma minúscula, um número e um caractere especial"
   )
+  @JsonSerialize(using = DataMaskingSerializer.class)
   String password,
 
   UserRole role,
