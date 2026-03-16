@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,7 +33,8 @@ public interface AuthControllerDocs {
   })
   ResponseEntity<ResponseWrapper<AuthResponse>> login(
     @Parameter(description = "Credenciais do usuário", required = true)
-    @Valid @RequestBody LoginRequest request
+    @Valid @RequestBody LoginRequest request,
+    @Parameter(hidden = true) HttpServletRequest servletRequest
   );
 
   @Operation(summary = "Verificar Conta", description = "Ativa a conta do usuário utilizando o código de verificação enviado por email.")
