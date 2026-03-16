@@ -46,4 +46,5 @@ dependency-reduced-pom.xml
 *.local
 .env
 .env.*
-!.env.example
+!.env.examplenode_modules/
+.pnpm-store/

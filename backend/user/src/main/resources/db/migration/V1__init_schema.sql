@@ -20,11 +20,13 @@ CREATE TABLE IF NOT EXISTS tb_users (
     reset_password_token            VARCHAR(255)    NULL,
     reset_password_token_expires_at DATETIME(6)     NULL,
 
-    -- Segurança e Lockout
+    -- Segurança, Lockout e Rastreamento de Dispositivo (Login Seguro)
     failed_login_attempts           INT             NOT NULL DEFAULT 0,
     account_locked_until            DATETIME(6)     NULL,
     password_reset_requests         INT             NOT NULL DEFAULT 0,
     last_password_reset_request     DATETIME(6)     NULL,
+    last_ip_address                 VARCHAR(45)     NULL,
+    last_device_id                  VARCHAR(255)    NULL,
 
     CONSTRAINT pk_tb_users          PRIMARY KEY (id),
     CONSTRAINT uq_users_email       UNIQUE      (email)
