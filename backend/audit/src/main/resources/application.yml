@@ -21,7 +21,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -60,3 +60,7 @@ management:
   zipkin:
     tracing:
       endpoint: "http://zipkin:9411/api/v2/spans"
+
+app:
+  security:
+    encryption-key: ${ENCRYPTION_KEY:ThisIsAFixedKeyForEncryption32Ch}
