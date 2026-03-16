@@ -1,5 +1,7 @@
 package com.hms.profile.entities;
 
+import com.hms.common.util.CryptoConverter;
+import com.hms.common.util.DeterministicCryptoConverter;
 import com.hms.profile.enums.BloodGroup;
 import com.hms.profile.enums.Gender;
 import jakarta.persistence.*;
@@ -25,7 +27,8 @@ public class Patient {
   @Column(unique = true, nullable = false)
   private Long userId;
 
-  @Column(unique = true, nullable = false, length = 14)
+  @Column(unique = true, nullable = false)
+  @Convert(converter = DeterministicCryptoConverter.class)
   private String cpf;
 
   private LocalDate dateOfBirth;
@@ -47,14 +50,17 @@ public class Patient {
   private String emergencyContactPhone;
 
   @Column(columnDefinition = "TEXT")
+  @Convert(converter = CryptoConverter.class)
   private String familyHistory;
 
   @Column(columnDefinition = "TEXT")
+  @Convert(converter = CryptoConverter.class)
   private String chronicConditions;
 
   @ElementCollection
   @CollectionTable(name = "patient_allergies", joinColumns = @JoinColumn(name = "patient_id"))
   @Column(name = "allergy")
+  @Convert(converter = CryptoConverter.class)
   private Set<String> allergies = new HashSet<>();
 
   private String profilePictureUrl;

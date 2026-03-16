@@ -1,5 +1,6 @@
 package com.hms.pharmacy.entities;
 
+import com.hms.common.util.CryptoConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,8 +28,10 @@ public class PharmacySale {
   private Long patientId;
 
   @Column(nullable = false)
+  @Convert(converter = CryptoConverter.class)
   private String buyerName;
 
+  @Convert(converter = CryptoConverter.class)
   private String buyerContact;
 
   // Data e hora em que a venda foi realizada

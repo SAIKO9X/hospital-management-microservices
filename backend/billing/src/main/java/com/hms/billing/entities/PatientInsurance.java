@@ -1,5 +1,7 @@
 package com.hms.billing.entities;
 
+import com.hms.common.util.CryptoConverter;
+import com.hms.common.util.DeterministicCryptoConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,6 +23,7 @@ public class PatientInsurance {
   @Column(nullable = false)
   private String patientId; // vindo do Profile Service
 
+  @Convert(converter = DeterministicCryptoConverter.class)
   private String policyNumber; // número da carteirinha
 
   private LocalDate validUntil;

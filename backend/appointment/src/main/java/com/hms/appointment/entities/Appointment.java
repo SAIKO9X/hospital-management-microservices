@@ -2,6 +2,7 @@ package com.hms.appointment.entities;
 
 import com.hms.appointment.enums.AppointmentStatus;
 import com.hms.appointment.enums.AppointmentType;
+import com.hms.common.util.CryptoConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,12 +39,14 @@ public class Appointment {
   private LocalDateTime appointmentEndTime;
 
   @Lob
+  @Convert(converter = CryptoConverter.class)
   private String reason;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private AppointmentStatus status;
 
+  @Convert(converter = CryptoConverter.class)
   private String notes;
 
   @Column(name = "reminder_24h_sent")

@@ -1,6 +1,7 @@
 package com.hms.appointment.entities;
 
 import com.hms.appointment.enums.PrescriptionStatus;
+import com.hms.common.util.CryptoConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +29,7 @@ public class Prescription {
   private List<Medicine> medicines = new ArrayList<>();
 
   @Lob
+  @Convert(converter = CryptoConverter.class)
   private String notes;
 
   @CreationTimestamp

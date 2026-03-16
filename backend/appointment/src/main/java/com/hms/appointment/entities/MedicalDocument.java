@@ -1,6 +1,7 @@
 package com.hms.appointment.entities;
 
 import com.hms.appointment.enums.DocumentType;
+import com.hms.common.util.CryptoConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +28,7 @@ public class MedicalDocument {
   private Long appointmentId;
 
   @Column(nullable = false)
+  @Convert(converter = CryptoConverter.class)
   private String documentName; // Ex: "Exame de Sangue - Hemograma"
 
   @Column(nullable = false)

@@ -1,6 +1,7 @@
 package com.hms.appointment.entities;
 
 import com.hms.appointment.enums.ReportStatus;
+import com.hms.common.util.CryptoConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,12 +23,13 @@ public class AdverseEffectReport {
   private Long patientId;
 
   @Column(nullable = false)
-  private Long doctorId; // Para notificar o médico correto
+  private Long doctorId; // para notificar o médico correto
 
-  private Long prescriptionId; // Para saber a qual prescrição se refere
+  private Long prescriptionId;
 
   @Lob
-  private String description; // Descrição do efeito adverso
+  @Convert(converter = CryptoConverter.class)
+  private String description; // descrição do efeito adverso
 
   @Enumerated(EnumType.STRING)
   private ReportStatus status;
@@ -35,4 +37,3 @@ public class AdverseEffectReport {
   @CreationTimestamp
   private LocalDateTime reportedAt;
 }
-

@@ -1,5 +1,6 @@
 package com.hms.pharmacy.entities;
 
+import com.hms.common.util.CryptoConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,9 +26,11 @@ public class PrescriptionCopy {
   private LocalDate validUntil;
 
   @Lob
+  @Convert(converter = CryptoConverter.class)
   private String notes;
 
   @Column(columnDefinition = "TEXT")
+  @Convert(converter = CryptoConverter.class)
   private String itemsJson;
 
   private boolean processed = false;
