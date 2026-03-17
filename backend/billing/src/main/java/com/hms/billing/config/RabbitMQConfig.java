@@ -24,6 +24,11 @@ public class RabbitMQConfig {
   @Value("${application.rabbitmq.routing-keys.appointment-completed}")
   private String appointmentCompletedRoutingKey;
 
+  public static final String SAGA_APPOINTMENT_STARTED_QUEUE = "billing.saga.appointment.started.queue";
+  public static final String SAGA_APPOINTMENT_COMPENSATED_QUEUE = "billing.saga.appointment.compensated.queue";
+  public static final String SAGA_STARTED_ROUTING_KEY = "appointment.saga.started";
+  public static final String SAGA_COMPENSATED_ROUTING_KEY = "appointment.saga.compensated";
+
   @Bean
   public Queue billingQueue() {
     return new Queue(billingQueue);
@@ -50,6 +55,30 @@ public class RabbitMQConfig {
   @Bean
   public Queue billingPharmacyQueue() {
     return new Queue(BILLING_PHARMACY_QUEUE, true);
+  }
+  
+  @Bean
+  public Queue sagaAppointmentStartedQueue() {
+    return new Queue(SAGA_APPOINTMENT_STARTED_QUEUE, true);
+  }
+
+  @Bean
+  public Queue sagaAppointmentCompensatedQueue() {
+    return new Queue(SAGA_APPOINTMENT_COMPENSATED_QUEUE, true);
+  }
+
+  @Bean
+  public Binding sagaAppointmentStartedBinding() {
+    return BindingBuilder.bind(sagaAppointmentStartedQueue())
+      .to(internalExchange())
+      .with(SAGA_STARTED_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding sagaAppointmentCompensatedBinding() {
+    return BindingBuilder.bind(sagaAppointmentCompensatedQueue())
+      .to(internalExchange())
+      .with(SAGA_COMPENSATED_ROUTING_KEY);
   }
 
   @Bean

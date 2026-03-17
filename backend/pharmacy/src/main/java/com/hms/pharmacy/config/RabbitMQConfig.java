@@ -25,6 +25,11 @@ public class RabbitMQConfig {
   public static final String STOCK_LOW_QUEUE = "notification.stock.low.queue";
   public static final String STOCK_LOW_ROUTING_KEY = "stock.low";
 
+  public static final String SAGA_PHARMACY_STARTED_QUEUE = "pharmacy.saga.appointment.started.queue";
+  public static final String SAGA_PHARMACY_COMPENSATED_QUEUE = "pharmacy.saga.appointment.compensated.queue";
+  public static final String SAGA_STARTED_ROUTING_KEY = "appointment.saga.started";
+  public static final String SAGA_COMPENSATED_ROUTING_KEY = "appointment.saga.compensated";
+
   @Bean
   public TopicExchange exchange() {
     return new TopicExchange(exchange);
@@ -68,6 +73,30 @@ public class RabbitMQConfig {
   @Bean
   public Binding stockLowBinding() {
     return BindingBuilder.bind(stockLowQueue()).to(exchange()).with(STOCK_LOW_ROUTING_KEY);
+  }
+
+  @Bean
+  public Queue sagaPharmacyStartedQueue() {
+    return new Queue(SAGA_PHARMACY_STARTED_QUEUE, true);
+  }
+
+  @Bean
+  public Queue sagaPharmacyCompensatedQueue() {
+    return new Queue(SAGA_PHARMACY_COMPENSATED_QUEUE, true);
+  }
+
+  @Bean
+  public Binding sagaPharmacyStartedBinding() {
+    return BindingBuilder.bind(sagaPharmacyStartedQueue())
+      .to(exchange())
+      .with(SAGA_STARTED_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding sagaPharmacyCompensatedBinding() {
+    return BindingBuilder.bind(sagaPharmacyCompensatedQueue())
+      .to(exchange())
+      .with(SAGA_COMPENSATED_ROUTING_KEY);
   }
 
   @Bean

@@ -1,9 +1,13 @@
 package com.hms.appointment.services;
 
+import com.hms.appointment.dto.external.DoctorProfile;
+import com.hms.appointment.dto.external.PatientProfile;
+import com.hms.appointment.dto.external.UserResponse;
 import com.hms.appointment.dto.request.AppointmentCreateRequest;
 import com.hms.appointment.dto.request.AvailabilityRequest;
 import com.hms.appointment.dto.response.*;
 import com.hms.appointment.repositories.DoctorSummaryProjection;
+import com.hms.common.dto.response.ResponseWrapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,4 +68,12 @@ public interface AppointmentService {
   List<Long> getActiveDoctorIdsInLastHour();
 
   List<String> getAvailableTimeSlots(Long doctorId, LocalDate date, Integer duration);
+
+  ResponseWrapper<DoctorProfile> fetchDoctorByUserIdSafely(Long userId);
+
+  ResponseWrapper<PatientProfile> fetchPatientByUserIdSafely(Long userId);
+
+  PatientProfile fetchPatientByIdSafely(Long patientId);
+
+  UserResponse fetchUserByIdSafely(Long userId);
 }

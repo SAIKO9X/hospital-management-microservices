@@ -18,7 +18,7 @@ public class EventEnvelope<T> {
   private String correlationId;
   private T payload;
 
-  // Factory method para criar envelopes de forma consistente
+  // factory method para criar envelopes de forma consistente
   public static <T> EventEnvelope<T> create(String eventType, String correlationId, T payload) {
     return EventEnvelope.<T>builder()
       .eventId(UUID.randomUUID().toString())

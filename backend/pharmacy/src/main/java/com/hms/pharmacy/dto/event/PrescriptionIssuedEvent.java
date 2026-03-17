@@ -6,6 +6,7 @@ import java.util.List;
 
 public record PrescriptionIssuedEvent(
   Long prescriptionId,
+  Long appointmentId,
   Long patientId,
   Long doctorId,
   LocalDate validUntil,

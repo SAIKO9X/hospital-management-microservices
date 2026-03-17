@@ -1,4 +1,4 @@
-package com.hms.appointment.dto.event; // (E também no pacote equivalente do Notification)
+package com.hms.appointment.dto.event;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -6,6 +6,7 @@ import java.util.List;
 
 public record PrescriptionIssuedEvent(
   Long prescriptionId,
+  Long appointmentId,
   Long patientId,
   Long patientUserId,
   Long doctorId,

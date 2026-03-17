@@ -46,6 +46,14 @@ public class RabbitMQConfig {
   public static final String LAB_COMPLETED_QUEUE = "notification.lab.completed.queue";
   public static final String LAB_RESULT_ROUTING_KEY = "notification.lab.completed";
 
+  // Saga Queues
+  public static final String SAGA_BILLING_REPLY_QUEUE = "appointment.saga.billing.reply.queue";
+  public static final String SAGA_PHARMACY_REPLY_QUEUE = "appointment.saga.pharmacy.reply.queue";
+  public static final String BILLING_PROCESSED_ROUTING_KEY = "billing.processed";
+  public static final String BILLING_FAILED_ROUTING_KEY = "billing.failed";
+  public static final String PHARMACY_PROCESSED_ROUTING_KEY = "pharmacy.processed";
+  public static final String PHARMACY_FAILED_ROUTING_KEY = "pharmacy.failed";
+
   @Bean
   public TopicExchange exchange() {
     return new TopicExchange(exchange);
@@ -132,5 +140,63 @@ public class RabbitMQConfig {
     RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
     rabbitTemplate.setMessageConverter(jsonMessageConverter());
     return rabbitTemplate;
+  }
+
+  @Bean
+  public Queue billingReplyQueue() {
+    return new Queue(SAGA_BILLING_REPLY_QUEUE, true);
+  }
+
+  @Bean
+  public Queue pharmacyReplyQueue() {
+    return new Queue(SAGA_PHARMACY_REPLY_QUEUE, true);
+  }
+
+  @Bean
+  public Binding bindingBillingProcessed() {
+    return BindingBuilder.bind(billingReplyQueue())
+      .to(exchange())
+      .with(BILLING_PROCESSED_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingBillingFailed() {
+    return BindingBuilder.bind(billingReplyQueue())
+      .to(exchange())
+      .with(BILLING_FAILED_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingPharmacyProcessed() {
+    return BindingBuilder.bind(pharmacyReplyQueue())
+      .to(exchange())
+      .with(PHARMACY_PROCESSED_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingPharmacyFailed() {
+    return BindingBuilder.bind(pharmacyReplyQueue())
+      .to(exchange())
+      .with(PHARMACY_FAILED_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingDoctorQueue(TopicExchange exchange) {
+    return BindingBuilder.bind(doctorQueue()).to(exchange).with(DOCTOR_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingPatientQueue(TopicExchange exchange) {
+    return BindingBuilder.bind(patientQueue()).to(exchange).with(PATIENT_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingUserQueue(TopicExchange exchange) {
+    return BindingBuilder.bind(userSyncQueue()).to(exchange).with(USER_ROUTING_KEY);
+  }
+
+  @Bean
+  public Binding bindingLabCompletedQueue(TopicExchange exchange) {
+    return BindingBuilder.bind(labCompletedQueue()).to(exchange).with(LAB_RESULT_ROUTING_KEY);
   }
 }

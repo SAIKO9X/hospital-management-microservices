@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface PharmacySaleRepository extends JpaRepository<PharmacySale, Long> {
   List<PharmacySale> findByPatientId(Long patientId);
@@ -12,4 +13,6 @@ public interface PharmacySaleRepository extends JpaRepository<PharmacySale, Long
   boolean existsByOriginalPrescriptionId(Long originalPrescriptionId);
 
   List<PharmacySale> findBySaleDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+  
+  Optional<PharmacySale> findByAppointmentId(Long appointmentId);
 }

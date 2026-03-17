@@ -46,6 +46,7 @@ public class PrescriptionEventListener {
     try {
       PrescriptionCopy copy = new PrescriptionCopy();
       copy.setPrescriptionId(event.prescriptionId());
+      copy.setAppointmentId(event.appointmentId());
       copy.setPatientId(event.patientId());
       copy.setDoctorId(event.doctorId());
       copy.setValidUntil(event.validUntil());

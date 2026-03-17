@@ -28,28 +28,28 @@ VALUES
 INSERT IGNORE INTO tb_invoices
     (appointment_id, pharmacy_sale_id, patient_id, doctor_id,
      total_amount, insurance_covered, patient_payable,
-     status, issued_at, paid_at, patient_paid_at, insurance_paid_at)
+     status, issued_at, due_date, paid_at, patient_paid_at, insurance_paid_at)
 VALUES
     -- 1. Demo + Demo | R$ 150 (Unimed 80% cobre 120, Paciente 30) -> PAID
     (1, NULL, '1', '1', 150.00, 120.00, 30.00, 'PAID',
-     '2026-02-12 10:35:00', '2026-02-13 14:00:00', '2026-02-12 11:00:00', '2026-02-13 14:00:00'),
+     '2026-02-12 10:35:00', '2026-03-14 10:35:00', '2026-02-13 14:00:00', '2026-02-12 11:00:00', '2026-02-13 14:00:00'),
 
     -- 2. João + Carlos | R$ 250 (Amil 50% cobre 125, Paciente 125) -> INSURANCE_PENDING
     (2, NULL, '2', '2', 250.00, 125.00, 125.00, 'INSURANCE_PENDING',
-     '2026-02-15 14:35:00', NULL, NULL, NULL),
+     '2026-02-15 14:35:00', '2026-03-17 14:35:00', NULL, NULL, NULL),
 
     -- 3. Maria + Ana Paula | R$ 180 (Unimed 80% cobre 144, Paciente 36) -> PAID
     (3, NULL, '3', '3', 180.00, 144.00, 36.00, 'PAID',
-     '2026-02-20 09:35:00', '2026-02-21 10:00:00', '2026-02-20 10:00:00', '2026-02-21 10:00:00'),
+     '2026-02-20 09:35:00', '2026-03-22 09:35:00', '2026-02-21 10:00:00', '2026-02-20 10:00:00', '2026-02-21 10:00:00'),
 
     -- 4. Pedro + Roberto | R$ 200 (Sem seguro, Paciente 200) -> PAID
     (4, NULL, '4', '4', 200.00, 0.00, 200.00, 'PAID',
-     '2026-02-25 11:50:00', '2026-02-25 12:30:00', '2026-02-25 12:30:00', NULL),
+     '2026-02-25 11:50:00', '2026-03-27 11:50:00', '2026-02-25 12:30:00', '2026-02-25 12:30:00', NULL),
 
     -- 5. Ana + Mariana | R$ 170 (Unimed 80% cobre 136, Paciente 34) -> PAID
     (5, NULL, '5', '5', 170.00, 136.00, 34.00, 'PAID',
-     '2026-03-01 15:35:00', '2026-03-02 16:00:00', '2026-03-01 16:00:00', '2026-03-02 16:00:00'),
+     '2026-03-01 15:35:00', '2026-03-31 15:35:00', '2026-03-02 16:00:00', '2026-03-01 16:00:00', '2026-03-02 16:00:00'),
 
     -- 6. Lucas + Paulo | R$ 220 (Amil 50% cobre 110, Paciente 110) -> INSURANCE_PENDING
     (6, NULL, '6', '6', 220.00, 110.00, 110.00, 'INSURANCE_PENDING',
-     '2026-03-05 10:35:00', NULL, NULL, NULL);
+     '2026-03-05 10:35:00', '2026-04-04 10:35:00', NULL, NULL, NULL);

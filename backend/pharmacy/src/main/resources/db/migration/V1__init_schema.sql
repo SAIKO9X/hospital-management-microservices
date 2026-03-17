@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS tb_medicine_inventory (
 CREATE TABLE IF NOT EXISTS tb_pharmacy_sales (
     id                      BIGINT          NOT NULL AUTO_INCREMENT,
     original_prescription_id BIGINT         NULL,
+    appointment_id          BIGINT          NULL,
     patient_id              BIGINT          NOT NULL,
     buyer_name              VARCHAR(255)    NOT NULL,
     buyer_contact           VARCHAR(255)    NULL,
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS tb_pharmacy_sale_items (
 
 CREATE TABLE IF NOT EXISTS tb_prescription_copy (
     prescription_id BIGINT          NOT NULL,
+    appointment_id  BIGINT          NULL,
     patient_id      BIGINT          NULL,
     doctor_id       BIGINT          NULL,
     valid_until     DATE            NULL,

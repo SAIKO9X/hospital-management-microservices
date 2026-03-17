@@ -65,31 +65,31 @@ VALUES
 -- 3. CONSULTAS (Histórico e Futuras)
 -- ============================================================
 INSERT IGNORE INTO tb_appointments
-    (id, patient_id, doctor_id, appointment_date_time, duration, appointment_end_time, reason, status, notes, type, reminder_24h_sent, reminder_1h_sent)
+    (id, patient_id, doctor_id, appointment_date_time, duration, appointment_end_time, reason, status, notes, type, reminder_24h_sent, reminder_1h_sent, billing_processed, pharmacy_processed)
 VALUES
     -- --- CONCLUÍDAS ---
-    (1, 1, 1, '2026-02-12 10:00:00', 30, '2026-02-12 10:30:00', 'Consulta de rotina anual — check-up geral', 'COMPLETED', 'Paciente sem queixas agudas. Exames solicitados.', 'IN_PERSON', TRUE, TRUE),
-    (2, 2, 2, '2026-02-15 14:00:00', 30, '2026-02-15 14:30:00', 'Dor no peito e cansaço aos esforços', 'COMPLETED', 'Diagnóstico de hipertensão arterial. Iniciado tratamento medicamentoso.', 'IN_PERSON', TRUE, TRUE),
-    (3, 3, 3, '2026-02-20 09:00:00', 30, '2026-02-20 09:30:00', 'Criança com febre há 2 dias e tosse', 'COMPLETED', 'Infecção viral de vias aéreas superiores. Prescrito antitérmico e antibiótico.', 'IN_PERSON', TRUE, TRUE),
-    (4, 4, 4, '2026-02-25 11:00:00', 45, '2026-02-25 11:45:00', 'Dor persistente no joelho direito há 3 semanas', 'COMPLETED', 'Gonartrose grau II confirmada por imagem. Anti-inflamatório prescrito. Fisioterapia recomendada.', 'IN_PERSON', TRUE, TRUE),
-    (5, 5, 5, '2026-03-01 15:00:00', 30, '2026-03-01 15:30:00', 'Lesão avermelhada e pruriginosa no antebraço esquerdo', 'COMPLETED', 'Dermatite de contato confirmada. Afastado uso de acessórios de níquel.', 'IN_PERSON', TRUE, TRUE),
-    (6, 6, 6, '2026-03-05 10:00:00', 30, '2026-03-05 10:30:00', 'Cefaleia intensa recorrente há 6 meses, com náuseas e fotofobia', 'COMPLETED', 'Diagnóstico de enxaqueca crônica. Iniciada profilaxia com beta-bloqueador.', 'IN_PERSON', TRUE, TRUE),
+    (1, 1, 1, '2026-02-12 10:00:00', 30, '2026-02-12 10:30:00', 'Consulta de rotina anual — check-up geral', 'COMPLETED', 'Paciente sem queixas agudas. Exames solicitados.', 'IN_PERSON', TRUE, TRUE, TRUE, TRUE),
+    (2, 2, 2, '2026-02-15 14:00:00', 30, '2026-02-15 14:30:00', 'Dor no peito e cansaço aos esforços', 'COMPLETED', 'Diagnóstico de hipertensão arterial. Iniciado tratamento medicamentoso.', 'IN_PERSON', TRUE, TRUE, TRUE, TRUE),
+    (3, 3, 3, '2026-02-20 09:00:00', 30, '2026-02-20 09:30:00', 'Criança com febre há 2 dias e tosse', 'COMPLETED', 'Infecção viral de vias aéreas superiores. Prescrito antitérmico e antibiótico.', 'IN_PERSON', TRUE, TRUE, TRUE, TRUE),
+    (4, 4, 4, '2026-02-25 11:00:00', 45, '2026-02-25 11:45:00', 'Dor persistente no joelho direito há 3 semanas', 'COMPLETED', 'Gonartrose grau II confirmada por imagem. Anti-inflamatório prescrito. Fisioterapia recomendada.', 'IN_PERSON', TRUE, TRUE, TRUE, TRUE),
+    (5, 5, 5, '2026-03-01 15:00:00', 30, '2026-03-01 15:30:00', 'Lesão avermelhada e pruriginosa no antebraço esquerdo', 'COMPLETED', 'Dermatite de contato confirmada. Afastado uso de acessórios de níquel.', 'IN_PERSON', TRUE, TRUE, TRUE, TRUE),
+    (6, 6, 6, '2026-03-05 10:00:00', 30, '2026-03-05 10:30:00', 'Cefaleia intensa recorrente há 6 meses, com náuseas e fotofobia', 'COMPLETED', 'Diagnóstico de enxaqueca crônica. Iniciada profilaxia com beta-bloqueador.', 'IN_PERSON', TRUE, TRUE, TRUE, TRUE),
 
     -- --- CANCELADAS / NÃO COMPARECEU ---
-    (7, 8, 1, '2026-02-18 09:00:00', 30, '2026-02-18 09:30:00', 'Check-up geral', 'CANCELED', 'Paciente cancelou por motivo pessoal.', 'IN_PERSON', TRUE, FALSE),
-    (8, 9, 2, '2026-03-03 14:00:00', 30, '2026-03-03 14:30:00', 'Avaliação cardiológica preventiva', 'CANCELED', 'Cancelada com 1 dia de antecedência.', 'IN_PERSON', TRUE, FALSE),
-    (9, 10, 3, '2026-03-04 11:00:00', 30, '2026-03-04 11:30:00', 'Consulta pediátrica de rotina', 'NO_SHOW', 'Paciente não compareceu e não avisou previamente.', 'IN_PERSON', TRUE, TRUE),
+    (7, 8, 1, '2026-02-18 09:00:00', 30, '2026-02-18 09:30:00', 'Check-up geral', 'CANCELED', 'Paciente cancelou por motivo pessoal.', 'IN_PERSON', TRUE, FALSE, FALSE, FALSE),
+    (8, 9, 2, '2026-03-03 14:00:00', 30, '2026-03-03 14:30:00', 'Avaliação cardiológica preventiva', 'CANCELED', 'Cancelada com 1 dia de antecedência.', 'IN_PERSON', TRUE, FALSE, FALSE, FALSE),
+    (9, 10, 3, '2026-03-04 11:00:00', 30, '2026-03-04 11:30:00', 'Consulta pediátrica de rotina', 'NO_SHOW', 'Paciente não compareceu e não avisou previamente.', 'IN_PERSON', TRUE, TRUE, FALSE, FALSE),
 
     -- --- AGENDADAS (FUTURO) ---
-    (10, 1,  1, '2026-03-13 10:00:00', 30, '2026-03-13 10:30:00', 'Retorno — resultado dos exames de check-up', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (11, 11, 2, '2026-03-13 14:00:00', 30, '2026-03-13 14:30:00', 'Primeira consulta cardiológica', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (12, 2,  2, '2026-03-19 09:00:00', 30, '2026-03-19 09:30:00', 'Retorno — controle de hipertensão arterial', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (13, 3,  3, '2026-03-20 10:00:00', 30, '2026-03-20 10:30:00', 'Retorno pediátrico — avaliação pós-infecção', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (14, 4,  4, '2026-03-26 11:00:00', 45, '2026-03-26 11:45:00', 'Retorno ortopédico', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (15, 7,  1, '2026-03-19 14:00:00', 30, '2026-03-19 14:30:00', 'Consulta geral — cansaço frequente', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (16, 5,  5, '2026-04-01 15:00:00', 30, '2026-04-01 15:30:00', 'Retorno dermatológico', 'SCHEDULED', NULL, 'ONLINE', FALSE, FALSE),
-    (17, 6,  6, '2026-04-10 09:00:00', 30, '2026-04-10 09:30:00', 'Retorno neurológico — controle da enxaqueca', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE),
-    (18, 8,  4, '2026-04-15 10:00:00', 30, '2026-04-15 10:30:00', 'Avaliação ortopédica inicial', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE);
+    (10, 1,  1, '2026-03-13 10:00:00', 30, '2026-03-13 10:30:00', 'Retorno — resultado dos exames de check-up', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (11, 11, 2, '2026-03-13 14:00:00', 30, '2026-03-13 14:30:00', 'Primeira consulta cardiológica', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (12, 2,  2, '2026-03-19 09:00:00', 30, '2026-03-19 09:30:00', 'Retorno — controle de hipertensão arterial', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (13, 3,  3, '2026-03-20 10:00:00', 30, '2026-03-20 10:30:00', 'Retorno pediátrico — avaliação pós-infecção', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (14, 4,  4, '2026-03-26 11:00:00', 45, '2026-03-26 11:45:00', 'Retorno ortopédico', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (15, 7,  1, '2026-03-19 14:00:00', 30, '2026-03-19 14:30:00', 'Consulta geral — cansaço frequente', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (16, 5,  5, '2026-04-01 15:00:00', 30, '2026-04-01 15:30:00', 'Retorno dermatológico', 'SCHEDULED', NULL, 'ONLINE', FALSE, FALSE, FALSE, FALSE),
+    (17, 6,  6, '2026-04-10 09:00:00', 30, '2026-04-10 09:30:00', 'Retorno neurológico — controle da enxaqueca', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE),
+    (18, 8,  4, '2026-04-15 10:00:00', 30, '2026-04-15 10:30:00', 'Avaliação ortopédica inicial', 'SCHEDULED', NULL, 'IN_PERSON', FALSE, FALSE, FALSE, FALSE);
 
 UPDATE tb_appointments SET meeting_url = 'https://meet.jit.si/hms-april-consultation-5-5' WHERE id = 16;
 

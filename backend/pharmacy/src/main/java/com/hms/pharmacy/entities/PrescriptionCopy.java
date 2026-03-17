@@ -21,6 +21,7 @@ public class PrescriptionCopy {
   @Id
   private Long prescriptionId;
 
+  private Long appointmentId;
   private Long patientId;
   private Long doctorId;
   private LocalDate validUntil;

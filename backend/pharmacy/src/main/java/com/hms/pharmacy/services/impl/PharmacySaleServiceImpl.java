@@ -5,10 +5,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hms.common.dto.event.EventEnvelope;
+import com.hms.common.dto.event.PharmacyFailedEvent;
+import com.hms.common.dto.event.PharmacyProcessedEvent;
 import com.hms.common.exceptions.InvalidOperationException;
 import com.hms.common.exceptions.ResourceNotFoundException;
 import com.hms.pharmacy.dto.event.PharmacySaleCreatedEvent;
 import com.hms.pharmacy.dto.event.PrescriptionDispensedEvent;
+import com.hms.pharmacy.dto.event.PrescriptionIssuedEvent;
 import com.hms.pharmacy.dto.request.DirectSaleRequest;
 import com.hms.pharmacy.dto.request.EmailRequest;
 import com.hms.pharmacy.dto.request.PharmacySaleRequest;
@@ -26,7 +29,9 @@ import com.hms.pharmacy.services.PharmacySaleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,11 +56,12 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
   private final ObjectMapper objectMapper;
   private final PatientReadModelRepository patientReadModelRepository;
 
+  @Autowired
+  @Lazy
+  private PharmacySaleService self;
+
   @Value("${application.rabbitmq.exchange}")
   private String exchange;
-
-  @Value("${application.rabbitmq.prescription-dispensed-routing-key:prescription.dispensed}")
-  private String prescriptionDispensedRoutingKey;
 
   private static final String PHARMACY_SALE_ROUTING_KEY = "pharmacy.sale.created";
 
@@ -85,7 +91,7 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
     List<SaleItemRequest> saleItems = mapPrescriptionToSaleItems(prescription);
     PharmacySaleRequest saleRequest = new PharmacySaleRequest(prescriptionId, prescription.getPatientId(), saleItems);
 
-    PharmacySaleResponse response = createSale(saleRequest);
+    PharmacySaleResponse response = self.createSale(saleRequest);
 
     markPrescriptionProcessed(prescription, response.id());
     return response;
@@ -94,7 +100,7 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
   @Override
   @Transactional
   public PharmacySaleResponse createDirectSale(DirectSaleRequest request) {
-    return createSale(new PharmacySaleRequest(null, request.patientId(), request.items()));
+    return self.createSale(new PharmacySaleRequest(null, request.patientId(), request.items()));
   }
 
   @Override
@@ -174,7 +180,7 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
 
       PharmacySaleItem saleItem = new PharmacySaleItem();
       saleItem.setSale(sale);
-      saleItem.setMedicineId(med.getId());
+      saleItem.setMedicine(med);
       saleItem.setMedicineName(med.getName() + " " + med.getDosage());
       saleItem.setQuantity(item.quantity());
       saleItem.setUnitPrice(med.getUnitPrice());
@@ -208,7 +214,7 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
         return new SaleItemRequest(m.getId(), (i.durationDays() != null && i.durationDays() > 0) ? i.durationDays() : 1);
       }).toList();
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Erro ao processar JSON da receita", e);
+      throw new InvalidOperationException("Erro ao processar JSON da receita", e);
     }
   }
 
@@ -224,6 +230,7 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
         event
       );
 
+      String prescriptionDispensedRoutingKey = "prescription.dispensed";
       rabbitTemplate.convertAndSend(exchange, prescriptionDispensedRoutingKey, envelope);
       log.info("Evento PRESCRIPTION_DISPENSED enviado. PrescriptionID: {}", p.getPrescriptionId());
     } catch (Exception e) {
@@ -257,7 +264,169 @@ public class PharmacySaleServiceImpl implements PharmacySaleService {
     }
   }
 
+  @Override
+  @Transactional
+  public void processPrescriptionForSaga(Long appointmentId, String patientIdStr, Long doctorId) {
+    if (saleRepository.findByAppointmentId(appointmentId).isPresent()) {
+      log.info("Sale already processed for appointment {}, skipping (idempotency).", appointmentId);
+      return;
+    }
+
+    long patientId;
+
+    try {
+      patientId = Long.parseLong(patientIdStr);
+    } catch (NumberFormatException e) {
+      log.error("Invalid patient ID format: {}", patientIdStr);
+      publishFailure(appointmentId, "Invalid patient ID format");
+      return;
+    }
+
+    Optional<PrescriptionCopy> copyOpt = prescriptionCopyRepository.findByAppointmentId(appointmentId);
+
+    if (copyOpt.isEmpty()) {
+      log.info("No prescription found for appointment {}. Assuming no medication needed.", appointmentId);
+      publishSuccess(appointmentId, null, 0.0);
+      return;
+    }
+
+    PrescriptionCopy copy = copyOpt.get();
+    if (copy.isProcessed()) {
+      log.info("Prescription copy {} already marked as processed.", copy.getPrescriptionId());
+    }
+
+    try {
+      List<PrescriptionIssuedEvent.PrescriptionItemEvent> items = deserializeItems(copy.getItemsJson());
+
+      if (items.isEmpty()) {
+        publishSuccess(appointmentId, null, 0.0);
+        return;
+      }
+
+      BigDecimal totalAmount = BigDecimal.ZERO;
+      List<PharmacySaleItem> saleItems = new ArrayList<>();
+
+      for (var item : items) {
+        PharmacySaleItem saleItem = createSaleItemFromEvent(item);
+        saleItems.add(saleItem);
+        totalAmount = totalAmount.add(saleItem.getTotalPrice());
+      }
+
+      for (var saleItem : saleItems) {
+        String batchInfo = inventoryService.sellStock(saleItem.getMedicine().getId(), saleItem.getQuantity());
+        saleItem.setBatchNo(batchInfo);
+      }
+
+      PharmacySale sale = new PharmacySale();
+      sale.setAppointmentId(appointmentId);
+      sale.setOriginalPrescriptionId(copy.getPrescriptionId());
+      sale.setPatientId(patientId);
+      sale.setBuyerName("Patient " + patientId);
+      sale.setTotalAmount(totalAmount);
+      sale.setSaleDate(LocalDateTime.now());
+
+      for (var item : saleItems) {
+        item.setSale(sale);
+      }
+      sale.setItems(saleItems);
+
+      PharmacySale savedSale = saleRepository.save(sale);
+
+      copy.setProcessed(true);
+      prescriptionCopyRepository.save(copy);
+
+      log.info("Pharmacy sale created for appointment {}: Sale ID {}", appointmentId, savedSale.getId());
+      publishSuccess(appointmentId, savedSale.getId(), totalAmount.doubleValue());
+
+    } catch (Exception e) {
+      log.error("Failed to process pharmacy sale for appointment {}", appointmentId, e);
+      publishFailure(appointmentId, e.getMessage());
+    }
+  }
+
+  @Override
+  @Transactional
+  public void compensatePrescriptionForSaga(Long appointmentId) {
+    saleRepository.findByAppointmentId(appointmentId).ifPresent(sale -> {
+      log.info("Compensating pharmacy sale for appointment {}", appointmentId);
+
+      for (PharmacySaleItem item : sale.getItems()) {
+        inventoryService.restoreStock(item.getMedicine().getId(), item.getQuantity()); // Changed addStock to restoreStock
+      }
+
+      saleRepository.delete(sale);
+
+      log.info("Pharmacy sale deleted and stock restored for appointment {}", appointmentId);
+    });
+  }
+
+  private void publishSuccess(Long appointmentId, Long saleId, Double amount) {
+    PharmacyProcessedEvent event = PharmacyProcessedEvent.builder()
+      .appointmentId(appointmentId)
+      .saleId(saleId)
+      .amount(amount)
+      .build();
+
+    EventEnvelope<PharmacyProcessedEvent> envelope = EventEnvelope.<PharmacyProcessedEvent>builder()
+      .eventId(UUID.randomUUID().toString())
+      .eventType("PHARMACY_PROCESSED")
+      .occurredAt(LocalDateTime.now())
+      .correlationId(String.valueOf(appointmentId))
+      .payload(event)
+      .build();
+
+    rabbitTemplate.convertAndSend(exchange, "pharmacy.processed", envelope);
+  }
+
+  private void publishFailure(Long appointmentId, String reason) {
+    PharmacyFailedEvent event = PharmacyFailedEvent.builder()
+      .appointmentId(appointmentId)
+      .reason(reason)
+      .build();
+
+    EventEnvelope<PharmacyFailedEvent> envelope = EventEnvelope.<PharmacyFailedEvent>builder()
+      .eventId(UUID.randomUUID().toString())
+      .eventType("PHARMACY_FAILED")
+      .occurredAt(LocalDateTime.now())
+      .correlationId(String.valueOf(appointmentId))
+      .payload(event)
+      .build();
+
+    rabbitTemplate.convertAndSend(exchange, "pharmacy.failed", envelope);
+  }
+
+  private List<PrescriptionIssuedEvent.PrescriptionItemEvent> deserializeItems(String json) {
+    if (json == null || json.isEmpty()) return Collections.emptyList();
+    try {
+      return new ObjectMapper().readValue(json, new TypeReference<>() {
+      });
+    } catch (JsonProcessingException e) {
+      log.error("Error deserializing prescription items", e);
+      return Collections.emptyList();
+    }
+  }
+
+  private PharmacySaleItem createSaleItemFromEvent(PrescriptionIssuedEvent.PrescriptionItemEvent item) {
+    Medicine medicine = medicineRepository.findByNameIgnoreCaseAndDosageIgnoreCase(
+        item.medicineName(), item.dosage())
+      .orElseThrow(() -> new InvalidOperationException("Medicine not found: " + item.medicineName() + " " + item.dosage()));
+
+    int quantity = 1;
+
+    if (medicine.getTotalStock() < quantity) {
+      throw new InvalidOperationException("Insufficient stock for: " + medicine.getName());
+    }
+
+    PharmacySaleItem saleItem = new PharmacySaleItem();
+    saleItem.setMedicine(medicine);
+    saleItem.setQuantity(quantity);
+    saleItem.setUnitPrice(medicine.getUnitPrice());
+    saleItem.setTotalPrice(medicine.getUnitPrice().multiply(BigDecimal.valueOf(quantity)));
+    return saleItem;
+  }
+
   @JsonIgnoreProperties(ignoreUnknown = true)
   private record PrescriptionItemDto(String medicineName, String dosage, Integer durationDays) {
   }
 }
+

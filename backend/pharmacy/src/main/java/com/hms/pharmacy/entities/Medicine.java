@@ -33,7 +33,7 @@ public class Medicine {
 
   private String manufacturer;
 
-  @Column(precision = 10, scale = 2)
+  @Column(nullable = false, precision = 10, scale = 2)
   private BigDecimal unitPrice;
 
   private Integer totalStock = 0;

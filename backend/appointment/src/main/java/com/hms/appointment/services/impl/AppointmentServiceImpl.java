@@ -18,6 +18,7 @@ import com.hms.appointment.enums.AppointmentType;
 import com.hms.appointment.repositories.*;
 import com.hms.appointment.services.AppointmentService;
 import com.hms.common.audit.AuditChangeTracker;
+import com.hms.common.dto.event.AppointmentCompletionStartedEvent;
 import com.hms.common.dto.event.EventEnvelope;
 import com.hms.common.dto.response.ResponseWrapper;
 import com.hms.common.exceptions.AccessDeniedException;
@@ -26,10 +27,8 @@ import com.hms.common.exceptions.ResourceNotFoundException;
 import com.hms.common.exceptions.ServiceUnavailableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -47,7 +46,6 @@ import java.util.stream.IntStream;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AppointmentServiceImpl implements AppointmentService {
 
   private final AppointmentRepository appointmentRepository;
@@ -59,9 +57,32 @@ public class AppointmentServiceImpl implements AppointmentService {
   private final RabbitTemplate rabbitTemplate;
   private final ProfileFeignClient profileFeignClient;
   private final UserFeignClient userFeignClient;
-  @Autowired
-  @Lazy
-  private AppointmentServiceImpl self;
+
+  private final AppointmentService self;
+
+  public AppointmentServiceImpl(
+    AppointmentRepository appointmentRepository,
+    DoctorReadModelRepository doctorReadModelRepository,
+    PatientReadModelRepository patientReadModelRepository,
+    DoctorAvailabilityRepository availabilityRepository,
+    DoctorUnavailabilityRepository unavailabilityRepository,
+    WaitlistRepository waitlistRepository,
+    RabbitTemplate rabbitTemplate,
+    ProfileFeignClient profileFeignClient,
+    UserFeignClient userFeignClient,
+    @Lazy AppointmentService self
+  ) {
+    this.appointmentRepository = appointmentRepository;
+    this.doctorReadModelRepository = doctorReadModelRepository;
+    this.patientReadModelRepository = patientReadModelRepository;
+    this.availabilityRepository = availabilityRepository;
+    this.unavailabilityRepository = unavailabilityRepository;
+    this.waitlistRepository = waitlistRepository;
+    this.rabbitTemplate = rabbitTemplate;
+    this.profileFeignClient = profileFeignClient;
+    this.userFeignClient = userFeignClient;
+    this.self = self;
+  }
 
   @Value("${application.rabbitmq.exchange}")
   private String exchange;
@@ -207,7 +228,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     return appointments.stream()
       .map(app -> mapToDetailResponse(app, doctor))
-      .collect(Collectors.toList());
+      .toList();
   }
 
   @Override
@@ -276,13 +297,36 @@ public class AppointmentServiceImpl implements AppointmentService {
     if (app.getStatus() != AppointmentStatus.SCHEDULED && app.getStatus() != AppointmentStatus.COMPLETED)
       throw new InvalidOperationException("Status inválido para finalização.");
 
-    app.setStatus(AppointmentStatus.COMPLETED);
+    app.setStatus(AppointmentStatus.COMPLETION_PENDING);
     app.setNotes(notes);
-
     Appointment saved = appointmentRepository.save(app);
-    publishStatusEvent(saved, "COMPLETED", notes, requesterUserId);
+
+    publishSagaStartEvent(saved);
 
     return AppointmentResponse.fromEntity(saved);
+  }
+
+  private void publishSagaStartEvent(Appointment app) {
+    try {
+      AppointmentCompletionStartedEvent event = AppointmentCompletionStartedEvent.builder()
+        .appointmentId(app.getId())
+        .patientId(app.getPatientId())
+        .doctorId(app.getDoctorId())
+        .status("COMPLETION_PENDING")
+        .build();
+
+      EventEnvelope<AppointmentCompletionStartedEvent> envelope = EventEnvelope.<AppointmentCompletionStartedEvent>builder()
+        .eventId(UUID.randomUUID().toString())
+        .eventType("APPOINTMENT_COMPLETION_STARTED")
+        .occurredAt(LocalDateTime.now())
+        .correlationId(String.valueOf(app.getId()))
+        .payload(event)
+        .build();
+
+      rabbitTemplate.convertAndSend(exchange, "appointment.saga.started", envelope);
+    } catch (Exception e) {
+      log.error("Failed to publish saga start event for appointment {}", app.getId(), e);
+    }
   }
 
   @Override
@@ -366,16 +410,14 @@ public class AppointmentServiceImpl implements AppointmentService {
   public List<DailyActivityDto> getDailyActivityStats() {
     LocalDateTime start = LocalDateTime.now().minusDays(30);
 
-    // Mapeamento correto para consultas
     Map<LocalDate, Long> appointments = mapQueryResults(
       appointmentRepository.countAppointmentsFromDateGroupedByDay(start));
 
-    // Mapeamento corrigido para pacientes (agrupando e contando)
     Map<LocalDate, Long> newPatients = appointmentRepository.findFirstAppointmentDateForPatients(start)
       .stream()
       .collect(Collectors.groupingBy(
         r -> {
-          Object dateObj = r[1]; // A data está no r[1]
+          Object dateObj = r[1]; // a data está no r[1]
           if (dateObj instanceof java.sql.Date d) return d.toLocalDate();
           if (dateObj instanceof LocalDate d) return d;
           return LocalDate.parse(dateObj.toString());
@@ -722,19 +764,7 @@ public class AppointmentServiceImpl implements AppointmentService {
       DoctorReadModel doctor = doctorReadModelRepository.findById(app.getDoctorId()).orElse(null);
 
       String patientName = patient != null ? patient.getFullName() : "Paciente";
-      String patientEmail = null;
-
-      if (patient != null && patient.getUserId() != null) {
-        try {
-          var user = self.fetchUserByIdSafely(patient.getUserId());
-          if (user != null) patientEmail = user.email();
-        } catch (Exception e) {
-          log.warn("Falha ao buscar e-mail via Feign para usuário {}: {}. Usando fallback.", patient.getUserId(), e.getMessage());
-          patientEmail = patient.getEmail();
-        }
-      } else if (patient != null) {
-        patientEmail = patient.getEmail();
-      }
+      String patientEmail = resolvePatientEmail(patient);
 
       String doctorName = doctor != null ? doctor.getFullName() : "Médico";
 
@@ -763,6 +793,22 @@ public class AppointmentServiceImpl implements AppointmentService {
     } catch (Exception e) {
       log.error("Erro ao agendar lembrete: {}", e.getMessage());
     }
+  }
+
+  private String resolvePatientEmail(PatientReadModel patient) {
+    String patientEmail = null;
+    if (patient != null && patient.getUserId() != null) {
+      try {
+        var user = self.fetchUserByIdSafely(patient.getUserId());
+        if (user != null) patientEmail = user.email();
+      } catch (Exception e) {
+        log.warn("Falha ao buscar e-mail via Feign para usuário {}: {}. Usando fallback.", patient.getUserId(), e.getMessage());
+        patientEmail = patient.getEmail();
+      }
+    } else if (patient != null) {
+      patientEmail = patient.getEmail();
+    }
+    return patientEmail;
   }
 
   private void checkAndNotifyWaitlist(Long doctorId, LocalDateTime date) {

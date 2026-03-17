@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -58,6 +57,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
   @Value("${application.rabbitmq.prescription-issued-routing-key}")
   private String prescriptionIssuedRoutingKey;
+
+  private static final String PRESCRIPTION = "Prescription";
 
   // Métodos auxiliares para resolver IDs a partir do userId, lançando exceção se não encontrado
   private Long resolvePatientId(Long userId) {
@@ -111,7 +112,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
       }
     }
 
-    final Long resolvedId = requesterProfileId; // effectively final
+    final Long resolvedId = requesterProfileId;
 
     return prescriptionRepository.findByAppointmentId(appointmentId)
       .map(prescription -> {
@@ -127,7 +128,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     Long doctorProfileId = resolveDoctorId(userDoctorId);
 
     Prescription prescription = prescriptionRepository.findById(prescriptionId)
-      .orElseThrow(() -> new ResourceNotFoundException("Prescription", prescriptionId));
+      .orElseThrow(() -> new ResourceNotFoundException(PRESCRIPTION, prescriptionId));
 
     validateDoctorAuthority(prescription.getAppointment(), doctorProfileId);
 
@@ -168,7 +169,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
   @Transactional(readOnly = true)
   public PrescriptionForPharmacyResponse getPrescriptionForPharmacy(Long prescriptionId) {
     Prescription prescription = prescriptionRepository.findById(prescriptionId)
-      .orElseThrow(() -> new ResourceNotFoundException("Prescription", prescriptionId));
+      .orElseThrow(() -> new ResourceNotFoundException(PRESCRIPTION, prescriptionId));
 
     if (prescription.getStatus() == PrescriptionStatus.DISPENSED) {
       throw new InvalidOperationException("Esta prescrição já foi utilizada.");
@@ -181,7 +182,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
   @Transactional
   public void markAsDispensed(Long prescriptionId) {
     Prescription prescription = prescriptionRepository.findById(prescriptionId)
-      .orElseThrow(() -> new ResourceNotFoundException("Prescription", prescriptionId));
+      .orElseThrow(() -> new ResourceNotFoundException(PRESCRIPTION, prescriptionId));
 
     if (prescription.getStatus() == PrescriptionStatus.DISPENSED) {
       return;
@@ -204,26 +205,12 @@ public class PrescriptionServiceImpl implements PrescriptionService {
   @Override
   public byte[] generatePrescriptionPdf(Long prescriptionId, Long requesterUserId) {
     Prescription prescription = prescriptionRepository.findById(prescriptionId)
-      .orElseThrow(() -> new ResourceNotFoundException("Prescription", prescriptionId));
+      .orElseThrow(() -> new ResourceNotFoundException(PRESCRIPTION, prescriptionId));
 
     Long patientId = prescription.getAppointment().getPatientId();
     Long doctorId = prescription.getAppointment().getDoctorId();
 
-    // tenta verificar se o requester corresponde a algum dos dois
-    boolean canView = false;
-    try {
-      Long pId = resolvePatientId(requesterUserId);
-      if (pId.equals(patientId)) canView = true;
-    } catch (Exception ignored) {
-    }
-
-    if (!canView) {
-      try {
-        Long dId = resolveDoctorId(requesterUserId);
-        if (dId.equals(doctorId)) canView = true;
-      } catch (Exception ignored) {
-      }
-    }
+    boolean canView = verifyViewAccess(requesterUserId, patientId, doctorId);
 
     if (!canView) {
       throw new AccessDeniedException("Acesso negado ao PDF da prescrição.");
@@ -231,6 +218,24 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     Map<String, Object> data = buildPdfContext(prescription);
     return pdfGeneratorService.generatePdfFromHtml("prescription-template", data);
+  }
+
+  private boolean verifyViewAccess(Long requesterUserId, Long patientId, Long doctorId) {
+    try {
+      Long pId = resolvePatientId(requesterUserId);
+      if (pId.equals(patientId)) return true;
+    } catch (ResourceNotFoundException ignored) {
+      // Ignorado enquanto consultamos o próximo médico.
+    }
+
+    try {
+      Long dId = resolveDoctorId(requesterUserId);
+      if (dId.equals(doctorId)) return true;
+    } catch (ResourceNotFoundException ignored) {
+      // Ignorado
+    }
+
+    return false;
   }
 
   private void validateDoctorAuthority(Appointment appointment, Long doctorProfileId) {
@@ -253,7 +258,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
       med.setFrequency(dto.frequency());
       med.setDuration(dto.duration());
       return med;
-    }).collect(Collectors.toList());
+    }).toList();
   }
 
   private Map<String, Object> buildPdfContext(Prescription prescription) {
@@ -298,50 +303,17 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         ? prescription.getCreatedAt().toLocalDate().plusDays(30)
         : LocalDate.now().plusDays(30);
 
-      String doctorName = "Médico";
-      try {
-        DoctorReadModel doctor = doctorReadModelRepository.findById(prescription.getAppointment().getDoctorId()).orElse(null);
-        if (doctor != null) {
-          doctorName = doctor.getFullName();
-        }
-      } catch (Exception e) {
-        log.warn("Erro ao buscar nome do médico: {}", e.getMessage());
-      }
-
-      String patientName = "Paciente";
-      String patientEmail = null;
-      Long patientUserId = null;
-
-      try {
-        PatientReadModel patient = patientReadModelRepository.findById(prescription.getAppointment().getPatientId()).orElse(null);
-
-        if (patient != null) {
-          patientName = patient.getFullName();
-          patientUserId = patient.getUserId();
-
-          if (patient.getUserId() != null) {
-            try {
-              UserResponse user = userFeignClient.getUserById(patient.getUserId());
-              patientEmail = user != null ? user.email() : patient.getEmail();
-            } catch (Exception ex) {
-              log.warn("Falha ao buscar email no User Service, usando fallback local. Erro: {}", ex.getMessage());
-              patientEmail = patient.getEmail();
-            }
-          } else {
-            patientEmail = patient.getEmail();
-          }
-        }
-      } catch (Exception e) {
-        log.warn("Erro ao buscar dados do paciente/email para o evento: {}", e.getMessage());
-      }
+      String doctorName = resolveDoctorName(prescription);
+      PatientEventData patientData = resolvePatientForEvent(prescription);
 
       PrescriptionIssuedEvent event = new PrescriptionIssuedEvent(
         prescription.getId(),
+        prescription.getAppointment().getId(), // appointmentId
         prescription.getAppointment().getPatientId(),
-        patientUserId,
+        patientData.userId(),
         prescription.getAppointment().getDoctorId(),
-        patientName,
-        patientEmail,
+        patientData.name(),
+        patientData.email(),
         doctorName,
         validUntil,
         prescription.getNotes(),
@@ -359,4 +331,50 @@ public class PrescriptionServiceImpl implements PrescriptionService {
       log.error("Erro ao publicar evento de prescrição: {}", e.getMessage());
     }
   }
+
+  private String resolveDoctorName(Prescription prescription) {
+    try {
+      DoctorReadModel doctor = doctorReadModelRepository.findById(prescription.getAppointment().getDoctorId()).orElse(null);
+      if (doctor != null) {
+        return doctor.getFullName();
+      }
+    } catch (Exception e) {
+      log.warn("Erro ao buscar nome do médico: {}", e.getMessage());
+    }
+    return "Médico";
+  }
+
+  private PatientEventData resolvePatientForEvent(Prescription prescription) {
+    String patientName = "Paciente";
+    String patientEmail = null;
+    Long patientUserId = null;
+
+    try {
+      PatientReadModel patient = patientReadModelRepository.findById(prescription.getAppointment().getPatientId()).orElse(null);
+
+      if (patient != null) {
+        patientName = patient.getFullName();
+        patientUserId = patient.getUserId();
+
+        if (patient.getUserId() != null) {
+          try {
+            UserResponse user = userFeignClient.getUserById(patient.getUserId());
+            patientEmail = user != null ? user.email() : patient.getEmail();
+          } catch (Exception ex) {
+            log.warn("Falha ao buscar email no User Service, usando fallback local. Erro: {}", ex.getMessage());
+            patientEmail = patient.getEmail();
+          }
+        } else {
+          patientEmail = patient.getEmail();
+        }
+      }
+    } catch (Exception e) {
+      log.warn("Erro ao buscar dados do paciente/email para o evento: {}", e.getMessage());
+    }
+    return new PatientEventData(patientName, patientEmail, patientUserId);
+  }
+
+  private record PatientEventData(String name, String email, Long userId) {
+  }
 }
+

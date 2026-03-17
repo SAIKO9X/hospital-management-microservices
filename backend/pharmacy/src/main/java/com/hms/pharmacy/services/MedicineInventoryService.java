@@ -17,4 +17,6 @@ public interface MedicineInventoryService {
   void deleteInventory(Long inventoryId);
 
   String sellStock(Long medicineId, Integer quantityToSell);
+  
+  void restoreStock(Long medicineId, Integer quantityToRestore);
 }

@@ -22,8 +22,9 @@ public class PharmacySaleItem {
   @JsonIgnore
   private PharmacySale sale;
 
-  @Column(nullable = false)
-  private Long medicineId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "medicine_id", nullable = false)
+  private Medicine medicine;
 
   @Column(nullable = false)
   private String medicineName;

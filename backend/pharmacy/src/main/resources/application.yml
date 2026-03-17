@@ -43,6 +43,8 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     locations: classpath:db/migration
+    clean-disabled: false
+    clean-on-validation-error: true
 
 application:
   rabbitmq:

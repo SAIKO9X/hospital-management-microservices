@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS tb_appointments (
     reminder_1h_sent        BOOLEAN         NOT NULL DEFAULT FALSE,
     type                    VARCHAR(50)     NULL,
     meeting_url             VARCHAR(255)    NULL,
+    billing_processed       BOOLEAN         NOT NULL DEFAULT FALSE,
+    pharmacy_processed      BOOLEAN         NOT NULL DEFAULT FALSE,
 
     CONSTRAINT pk_tb_appointments PRIMARY KEY (id)
 );

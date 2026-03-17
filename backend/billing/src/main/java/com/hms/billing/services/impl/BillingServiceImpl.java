@@ -11,14 +11,17 @@ import com.hms.billing.repositories.InsuranceProviderRepository;
 import com.hms.billing.repositories.InvoiceRepository;
 import com.hms.billing.repositories.PatientInsuranceRepository;
 import com.hms.billing.services.BillingService;
+import com.hms.common.dto.event.BillingFailedEvent;
+import com.hms.common.dto.event.BillingProcessedEvent;
+import com.hms.common.dto.event.EventEnvelope;
 import com.hms.common.dto.response.ResponseWrapper;
 import com.hms.common.exceptions.InvalidOperationException;
 import com.hms.common.exceptions.ResourceNotFoundException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +32,9 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class BillingServiceImpl implements BillingService {
 
@@ -40,10 +43,29 @@ public class BillingServiceImpl implements BillingService {
   private final PdfGeneratorService pdfGeneratorService;
   private final InsuranceProviderRepository providerRepository;
   private final ProfileFeignClient profileClient;
+  private final RabbitTemplate rabbitTemplate;
+  private final BillingService self;
 
-  @Autowired
-  @Lazy
-  private BillingServiceImpl self;
+  public BillingServiceImpl(
+    InvoiceRepository invoiceRepository,
+    PatientInsuranceRepository patientInsuranceRepository,
+    PdfGeneratorService pdfGeneratorService,
+    InsuranceProviderRepository providerRepository,
+    ProfileFeignClient profileClient,
+    RabbitTemplate rabbitTemplate,
+    @Lazy BillingService self
+  ) {
+    this.invoiceRepository = invoiceRepository;
+    this.patientInsuranceRepository = patientInsuranceRepository;
+    this.pdfGeneratorService = pdfGeneratorService;
+    this.providerRepository = providerRepository;
+    this.profileClient = profileClient;
+    this.rabbitTemplate = rabbitTemplate;
+    this.self = self;
+  }
+
+  @Value("${application.rabbitmq.exchanges.internal}")
+  private String exchange;
 
   private static final BigDecimal BASE_FEE = new BigDecimal("200.00");
 
@@ -70,7 +92,6 @@ public class BillingServiceImpl implements BillingService {
       return;
     }
 
-    // busca dinamicamente a taxa cadastrada no perfil do médico
     BigDecimal consultationFee = fetchConsultationFee(doctorId);
 
     Invoice invoice = new Invoice();
@@ -78,6 +99,9 @@ public class BillingServiceImpl implements BillingService {
     invoice.setPatientId(patientId);
     invoice.setDoctorId(doctorId);
     invoice.setTotalAmount(consultationFee);
+    invoice.setIssuedAt(LocalDateTime.now());
+    invoice.setDueDate(LocalDateTime.now().plusDays(30));
+    invoice.setStatus(InvoiceStatus.PENDING);
 
     applyInsuranceIfAvailable(invoice, patientId, consultationFee);
 
@@ -146,6 +170,51 @@ public class BillingServiceImpl implements BillingService {
     Invoice invoice = findInvoice(invoiceId);
     Map<String, Object> data = buildPdfData(invoice);
     return pdfGeneratorService.generatePdfFromHtml("invoice", data);
+  }
+
+  @Override
+  @Transactional
+  public void processAppointmentCompletion(Long appointmentId, String patientId, String doctorId) {
+    if (invoiceRepository.findByAppointmentId(appointmentId).isPresent()) {
+      log.info("Fatura já processada para a consulta {}, ignorando (idempotência).", appointmentId);
+      return;
+    }
+
+    try {
+      BigDecimal consultationFee = fetchConsultationFee(doctorId);
+
+      Invoice invoice = new Invoice();
+      invoice.setAppointmentId(appointmentId);
+      invoice.setPatientId(patientId);
+      invoice.setDoctorId(doctorId);
+      invoice.setIssuedAt(LocalDateTime.now());
+      invoice.setDueDate(LocalDateTime.now().plusDays(30));
+      invoice.setTotalAmount(consultationFee);
+      invoice.setStatus(InvoiceStatus.PENDING);
+
+      applyInsuranceIfAvailable(invoice, patientId, consultationFee);
+
+      invoice = invoiceRepository.save(invoice);
+      log.info("Fatura gerada para a consulta {}", appointmentId);
+
+      publishBillingSuccess(appointmentId, invoice);
+
+    } catch (Exception e) {
+      log.error("Falha ao gerar fatura para a consulta {}", appointmentId, e);
+      publishBillingFailure(appointmentId, e.getMessage());
+    }
+  }
+
+  @Override
+  @Transactional
+  public void compensateAppointmentCompletion(Long appointmentId) {
+    invoiceRepository.findByAppointmentId(appointmentId).ifPresent(invoice -> {
+      if (invoice.getStatus() != InvoiceStatus.VOIDED && invoice.getStatus() != InvoiceStatus.CANCELLED) {
+        invoice.setStatus(InvoiceStatus.VOIDED);
+        invoiceRepository.save(invoice);
+        log.info("Fatura da consulta {} foi ANULADA devido à compensação da Saga.", appointmentId);
+      }
+    });
   }
 
   private Invoice findInvoice(Long id) {
@@ -228,6 +297,7 @@ public class BillingServiceImpl implements BillingService {
     return data;
   }
 
+  @Override
   @CircuitBreaker(name = "profileService", fallbackMethod = "fetchPatientByUserIdFallback")
   @Retry(name = "profileService")
   public ResponseWrapper<PatientDTO> fetchPatientByUserIdSafely(Long userId) {
@@ -240,6 +310,7 @@ public class BillingServiceImpl implements BillingService {
     return null;
   }
 
+  @Override
   @CircuitBreaker(name = "profileService", fallbackMethod = "fetchPatientFallback")
   @Retry(name = "profileService")
   public ResponseWrapper<PatientDTO> fetchPatientSafely(Long patientId) {
@@ -252,6 +323,7 @@ public class BillingServiceImpl implements BillingService {
     return null;
   }
 
+  @Override
   @CircuitBreaker(name = "profileService", fallbackMethod = "fetchDoctorFallback")
   @Retry(name = "profileService")
   public ResponseWrapper<DoctorDTO> fetchDoctorSafely(Long doctorId) {
@@ -263,4 +335,40 @@ public class BillingServiceImpl implements BillingService {
     log.warn("Profile Service offline. O PDF da fatura será gerado sem o nome completo do médico {}.", doctorId);
     return null;
   }
+
+  private void publishBillingSuccess(Long appointmentId, Invoice invoice) {
+    BillingProcessedEvent event = BillingProcessedEvent.builder()
+      .appointmentId(appointmentId)
+      .invoiceId(invoice.getId())
+      .amount(invoice.getTotalAmount().doubleValue())
+      .build();
+
+    EventEnvelope<BillingProcessedEvent> envelope = EventEnvelope.<BillingProcessedEvent>builder()
+      .eventId(UUID.randomUUID().toString())
+      .eventType("BILLING_PROCESSED")
+      .occurredAt(LocalDateTime.now())
+      .correlationId(String.valueOf(appointmentId))
+      .payload(event)
+      .build();
+
+    rabbitTemplate.convertAndSend(exchange, "billing.processed", envelope);
+  }
+
+  private void publishBillingFailure(Long appointmentId, String reason) {
+    BillingFailedEvent event = BillingFailedEvent.builder()
+      .appointmentId(appointmentId)
+      .reason(reason)
+      .build();
+
+    EventEnvelope<BillingFailedEvent> envelope = EventEnvelope.<BillingFailedEvent>builder()
+      .eventId(UUID.randomUUID().toString())
+      .eventType("BILLING_FAILED")
+      .occurredAt(LocalDateTime.now())
+      .correlationId(String.valueOf(appointmentId))
+      .payload(event)
+      .build();
+
+    rabbitTemplate.convertAndSend(exchange, "billing.failed", envelope);
+  }
 }
+

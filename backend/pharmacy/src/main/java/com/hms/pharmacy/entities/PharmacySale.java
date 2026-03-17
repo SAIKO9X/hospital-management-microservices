@@ -24,6 +24,9 @@ public class PharmacySale {
   @Column(nullable = true)
   private Long originalPrescriptionId;
 
+  @Column(nullable = true)
+  private Long appointmentId;
+
   @Column(nullable = false)
   private Long patientId;
 

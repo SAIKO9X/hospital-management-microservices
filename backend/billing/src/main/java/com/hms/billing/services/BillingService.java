@@ -1,7 +1,10 @@
 package com.hms.billing.services;
 
+import com.hms.billing.dto.external.DoctorDTO;
+import com.hms.billing.dto.external.PatientDTO;
 import com.hms.billing.entities.Invoice;
 import com.hms.billing.entities.PatientInsurance;
+import com.hms.common.dto.response.ResponseWrapper;
 
 import java.util.List;
 
@@ -18,7 +21,17 @@ public interface BillingService {
 
   void processInsurancePayment(Long invoiceId);
 
-  byte[] generateInvoicePdf(Long invoiceId);
+  void processAppointmentCompletion(Long appointmentId, String patientId, String doctorId);
+
+  void compensateAppointmentCompletion(Long appointmentId);
 
   List<Invoice> getPendingInsuranceInvoices();
+
+  byte[] generateInvoicePdf(Long invoiceId);
+
+  ResponseWrapper<PatientDTO> fetchPatientByUserIdSafely(Long userId);
+
+  ResponseWrapper<PatientDTO> fetchPatientSafely(Long patientId);
+
+  ResponseWrapper<DoctorDTO> fetchDoctorSafely(Long doctorId);
 }

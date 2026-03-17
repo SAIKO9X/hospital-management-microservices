@@ -39,6 +39,7 @@ public class MedicineInventoryServiceImpl implements MedicineInventoryService {
   @Value("${application.rabbitmq.exchange}")
   private String exchange;
 
+  private static final String INVENTORY_ITEM = "Inventory Item";
   private static final int LOW_STOCK_THRESHOLD = 10;
 
   @Override
@@ -71,13 +72,13 @@ public class MedicineInventoryServiceImpl implements MedicineInventoryService {
   public MedicineInventoryResponse getInventoryById(Long id) {
     return inventoryRepository.findById(id)
       .map(MedicineInventoryResponse::fromEntity)
-      .orElseThrow(() -> new ResourceNotFoundException("Inventory Item", id));
+      .orElseThrow(() -> new ResourceNotFoundException(INVENTORY_ITEM, id));
   }
 
   @Override
   public MedicineInventoryResponse updateInventory(Long inventoryId, MedicineInventoryRequest request) {
     MedicineInventory inventory = inventoryRepository.findById(inventoryId)
-      .orElseThrow(() -> new ResourceNotFoundException("Inventory Item", inventoryId));
+      .orElseThrow(() -> new ResourceNotFoundException(INVENTORY_ITEM, inventoryId));
 
     updateStockDifference(inventory, request.quantity());
 
@@ -92,7 +93,7 @@ public class MedicineInventoryServiceImpl implements MedicineInventoryService {
   @Override
   public void deleteInventory(Long inventoryId) {
     MedicineInventory inventory = inventoryRepository.findById(inventoryId)
-      .orElseThrow(() -> new ResourceNotFoundException("Inventory Item", inventoryId));
+      .orElseThrow(() -> new ResourceNotFoundException(INVENTORY_ITEM, inventoryId));
 
     medicineService.removeStock(inventory.getMedicine().getId(), inventory.getQuantity());
     inventoryRepository.delete(inventory);
@@ -100,6 +101,8 @@ public class MedicineInventoryServiceImpl implements MedicineInventoryService {
 
   @Override
   public String sellStock(Long medicineId, Integer quantityToSell) {
+    if (quantityToSell <= 0) return "N/A";
+
     List<MedicineInventory> batches = inventoryRepository
       .findByMedicineIdAndStatusAndQuantityGreaterThanOrderByExpiryDateAsc(medicineId, StockStatus.ACTIVE, 0);
 
@@ -127,6 +130,34 @@ public class MedicineInventoryServiceImpl implements MedicineInventoryService {
     checkLowStock(medicineId, totalAvailable - quantityToSell, batches.get(0).getMedicine().getName());
 
     return batchDetails.toString().trim();
+  }
+
+  @Override
+  public void restoreStock(Long medicineId, Integer quantityToRestore) {
+      if (quantityToRestore <= 0) return;
+      
+      Medicine medication = medicineRepository.findById(medicineId)
+         .orElseThrow(() -> new ResourceNotFoundException("Medicine", medicineId));
+         
+      medicineService.addStock(medicineId, quantityToRestore);
+      
+       List<MedicineInventory> inventories = inventoryRepository.findByMedicineIdAndStatus(medicineId, StockStatus.ACTIVE);
+      if (!inventories.isEmpty()) {
+          MedicineInventory inv = inventories.getFirst();
+          inv.setQuantity(inv.getQuantity() + quantityToRestore);
+          inventoryRepository.save(inv);
+      } else {
+          MedicineInventory newInv = new MedicineInventory();
+          newInv.setMedicine(medication);
+          newInv.setBatchNo("RESTORED-SAGA");
+          newInv.setQuantity(quantityToRestore);
+          newInv.setExpiryDate(LocalDate.now().plusYears(1));
+          newInv.setStatus(StockStatus.ACTIVE);
+          newInv.setAddedDate(LocalDate.now());
+          inventoryRepository.save(newInv);
+      }
+      
+      log.info("Restored {} items for medicine {}", quantityToRestore, medicineId);
   }
 
   private void updateStockDifference(MedicineInventory inventory, int newQuantity) {

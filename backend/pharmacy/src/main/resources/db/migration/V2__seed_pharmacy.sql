@@ -87,36 +87,36 @@ VALUES
 -- 4. PRESCRIÇÕES (MENSAGERIA)
 -- ============================================================
 INSERT IGNORE INTO tb_prescription_copy
-    (prescription_id, patient_id, doctor_id, valid_until, notes, items_json, processed, received_at)
+    (prescription_id, appointment_id, patient_id, doctor_id, valid_until, notes, items_json, processed, received_at)
 VALUES
     (
-        1, 1, 1, '2026-03-14',
+        1, 1, 1, 1, '2026-03-14',
         'Prescrição de rotina. Retorno em 30 dias com resultados dos exames.',
         '[{"name":"Paracetamol","dosage":"500mg","frequency":"1 comprimido a cada 8h se dor/febre","duration":7},{"name":"Omeprazol","dosage":"20mg","frequency":"1 cápsula em jejum pela manhã","duration":30}]',
         TRUE, '2026-02-12 11:00:00'
     ),
     (
-        2, 2, 2, '2026-03-15',
+        2, 2, 2, 2, '2026-03-15',
         'Tratamento para hipertensão arterial estágio 1. Monitorar PA semanalmente.',
-        '[{"name":"Losartana Potássica","dosage":"50mg","frequency":"1 comprimido ao dia pela manhã","duration":30},{"name":"Atorvastatina","dosage":"20mg","frequency":"1 comprimido à noite","duration":30}]',
-        TRUE, '2026-02-15 15:30:00'
+        '[{"name":"Losartana Potássica","dosage":"50mg","frequency":"1 comprimido ao dia, preferencialmente pela manhã","duration":30},{"name":"Atorvastatina","dosage":"20mg","frequency":"1 comprimido à noite","duration":30}]',
+        TRUE, '2026-02-15 15:00:00'
     ),
     (
-        3, 3, 3, '2026-02-27',
+        3, 3, 3, 3, '2026-02-27',
         'Tratamento de infecção viral com antibioticoterapia empírica e antitérmico.',
-        '[{"name":"Amoxicilina","dosage":"500mg","frequency":"1 cápsula a cada 8h","duration":7},{"name":"Paracetamol Pediátrico","dosage":"200mg/mL","frequency":"0,4mL/kg a cada 6h se febre","duration":5}]',
-        TRUE, '2026-02-20 10:30:00'
+        '[{"name":"Amoxicilina","dosage":"500mg","frequency":"1 cápsula a cada 8 horas","duration":7},{"name":"Paracetamol Pediátrico","dosage":"200mg/mL (solução)","frequency":"Dose: 0,4 mL/kg a cada 6 horas se febre acima de 37,8°C","duration":5}]',
+        TRUE, '2026-02-20 09:30:00'
     );
 
 -- ============================================================
 -- 5. VENDAS DE BALCÃO
 -- ============================================================
 INSERT IGNORE INTO tb_pharmacy_sales
-    (id, original_prescription_id, patient_id, buyer_name, buyer_contact, sale_date, total_amount)
+    (id, original_prescription_id, appointment_id, patient_id, buyer_name, buyer_contact, sale_date, total_amount)
 VALUES
-    (1, 1, 3,  'Patient Demo',          '(11) 99999-0001', '2026-02-12 11:30:00', 200.00),
-    (2, 2, 9,  'João Victor Silva',     '(11) 98765-4001', '2026-02-15 16:00:00', 414.00),
-    (3, 3, 10, 'Maria Fernanda Santos', '(11) 98765-4002', '2026-02-20 11:00:00', 211.90);
+    (1, 1, 1, 3,  'Patient Demo',          '(11) 99999-0001', '2026-02-12 11:30:00', 200.00),
+    (2, 2, 2, 9,  'João Victor Silva',     '(11) 98765-4001', '2026-02-15 16:00:00', 414.00),
+    (3, 3, 3, 10, 'Maria Fernanda Santos', '(11) 98765-4002', '2026-02-20 11:00:00', 211.90);
 
 -- ============================================================
 -- 6. ITENS DAS VENDAS

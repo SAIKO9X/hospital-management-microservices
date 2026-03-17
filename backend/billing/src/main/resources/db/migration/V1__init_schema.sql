@@ -23,6 +23,7 @@ CREATE TABLE tb_invoices (
     patient_payable     DECIMAL(10,2)   NOT NULL,
     status              VARCHAR(50)     NOT NULL,
     issued_at           DATETIME(6)     NULL,
+    due_date            DATETIME(6)     NULL,
     paid_at             DATETIME(6)     NULL,
     patient_paid_at     DATETIME(6)     NULL,
     insurance_paid_at   DATETIME(6)     NULL,

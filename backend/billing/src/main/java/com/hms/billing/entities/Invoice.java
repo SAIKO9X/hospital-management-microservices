@@ -35,10 +35,10 @@ public class Invoice {
   private BigDecimal totalAmount;
 
   @Column(precision = 10, scale = 2, nullable = false)
-  private BigDecimal insuranceCovered = BigDecimal.ZERO;    // Coberto pelo convênio (Ex: 160.00)
+  private BigDecimal insuranceCovered = BigDecimal.ZERO;    // coberto pelo convênio (Ex: 160.00)
 
   @Column(precision = 10, scale = 2, nullable = false)
-  private BigDecimal patientPayable;      // A pagar pelo paciente (Ex: 40.00)
+  private BigDecimal patientPayable;      // a pagar pelo paciente (Ex: 40.00)
 
   @Column(length = 50, nullable = false)
   @Enumerated(EnumType.STRING)
@@ -46,6 +46,8 @@ public class Invoice {
 
   @CreationTimestamp
   private LocalDateTime issuedAt;
+
+  private LocalDateTime dueDate;
 
   private LocalDateTime paidAt;
 

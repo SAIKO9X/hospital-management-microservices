@@ -23,4 +23,8 @@ public interface PharmacySaleService {
   PharmacySaleResponse createDirectSale(DirectSaleRequest request);
 
   PharmacyFinancialStatsResponse getFinancialStatsLast30Days();
+
+  void processPrescriptionForSaga(Long appointmentId, String patientId, Long doctorId);
+
+  void compensatePrescriptionForSaga(Long appointmentId);
 }

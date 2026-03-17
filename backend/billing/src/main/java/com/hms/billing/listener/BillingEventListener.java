@@ -8,6 +8,8 @@ import com.hms.billing.entities.Invoice;
 import com.hms.billing.enums.InvoiceStatus;
 import com.hms.billing.repositories.InvoiceRepository;
 import com.hms.billing.services.BillingService;
+import com.hms.common.dto.event.AppointmentCompletionCompensatedEvent;
+import com.hms.common.dto.event.AppointmentCompletionStartedEvent;
 import com.hms.common.dto.event.EventEnvelope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,5 +72,31 @@ public class BillingEventListener {
     invoice.setPaidAt(LocalDateTime.now());
     invoiceRepository.save(invoice);
     log.info("Fatura de Farmácia criada com sucesso: Invoice ID {}", invoice.getId());
+  }
+
+  @RabbitListener(queues = RabbitMQConfig.SAGA_APPOINTMENT_STARTED_QUEUE)
+  @Transactional
+  public void handleSagaStarted(@Payload EventEnvelope<?> envelope) {
+      log.info("Received Saga Start Event: {}", envelope.getEventId());
+      AppointmentCompletionStartedEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentCompletionStartedEvent.class);
+      
+      if (event == null) return;
+
+      billingService.processAppointmentCompletion(
+          event.getAppointmentId(),
+          String.valueOf(event.getPatientId()),
+          String.valueOf(event.getDoctorId())
+      );
+  }
+
+  @RabbitListener(queues = RabbitMQConfig.SAGA_APPOINTMENT_COMPENSATED_QUEUE)
+  @Transactional
+  public void handleSagaCompensated(@Payload EventEnvelope<?> envelope) {
+      log.info("Received Saga Compensation Event: {}", envelope.getEventId());
+      AppointmentCompletionCompensatedEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentCompletionCompensatedEvent.class);
+
+      if (event == null) return;
+
+      billingService.compensateAppointmentCompletion(event.getAppointmentId());
   }
 }

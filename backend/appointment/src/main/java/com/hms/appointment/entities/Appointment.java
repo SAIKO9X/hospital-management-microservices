@@ -61,4 +61,10 @@ public class Appointment {
 
   @Column(name = "meeting_url")
   private String meetingUrl;
+
+  @Column(name = "billing_processed")
+  private boolean billingProcessed = false;
+
+  @Column(name = "pharmacy_processed")
+  private boolean pharmacyProcessed = false;
 }

@@ -14,4 +14,6 @@ public interface MedicineInventoryRepository extends JpaRepository<MedicineInven
   List<MedicineInventory> findByMedicineIdAndStatusAndQuantityGreaterThanOrderByExpiryDateAsc(
     Long medicineId, StockStatus status, Integer quantity
   );
+  
+  List<MedicineInventory> findByMedicineIdAndStatus(Long medicineId, StockStatus status);
 }
