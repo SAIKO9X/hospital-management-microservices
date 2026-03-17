@@ -28,7 +28,7 @@ import {
 import { ImportPrescriptionDialog } from "@/features/admin/components/sales/ImportPrescriptionDialog";
 
 import type { Prescription } from "@/types/record.types";
-import { saleFormSchema, type SaleFormData } from "@/lib/schemas/sale.schema";
+import { saleFormSchema, type SaleFormData } from "@/schemas/sale.schema";
 import { CustomNotification } from "@/components/notifications/CustomNotification";
 import { Combobox } from "@/components/ui/combobox";
 
@@ -142,7 +142,7 @@ export const AdminNewSalePage = () => {
         const stockMedicine = medicines.find(
           (stockMed) =>
             stockMed.name.toLowerCase() === med.name.toLowerCase() &&
-            stockMed.dosage.toLowerCase() === med.dosage.toLowerCase()
+            stockMed.dosage.toLowerCase() === med.dosage.toLowerCase(),
         );
         return {
           medicineId: stockMedicine?.id || 0,
@@ -268,10 +268,10 @@ export const AdminNewSalePage = () => {
             <FormLabel>Medicamentos *</FormLabel>
             {fields.map((item, index) => {
               const selectedMedicineId = form.watch(
-                `items.${index}.medicineId`
+                `items.${index}.medicineId`,
               );
               const selectedMedicine = medicines.find(
-                (m) => m.id === selectedMedicineId
+                (m) => m.id === selectedMedicineId,
               );
 
               return (

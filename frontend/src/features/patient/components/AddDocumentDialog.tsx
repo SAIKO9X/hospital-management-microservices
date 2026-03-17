@@ -28,7 +28,7 @@ import { DocumentType } from "@/types/document.types";
 import {
   DocumentSchema,
   type DocumentFormData,
-} from "@/lib/schemas/document.schema";
+} from "@/schemas/document.schema";
 import { FormInput, FormSelect } from "@/components/ui/form-fields";
 
 const DOCUMENT_OPTIONS = [

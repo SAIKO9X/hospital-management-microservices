@@ -13,7 +13,7 @@ import type {
   DailyActivity,
   DoctorStatus,
 } from "@/types/admin.types";
-import type { AdminCreateUserFormData } from "@/lib/schemas/admin.schema";
+import type { AdminCreateUserFormData } from "@/schemas/admin.schema";
 import type { UserResponse } from "@/types/auth.types";
 import type { AppointmentDetail } from "@/types/appointment.types";
 import type { MedicalHistory } from "@/types/patient.types";

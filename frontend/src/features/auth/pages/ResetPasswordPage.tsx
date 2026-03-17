@@ -16,7 +16,7 @@ import {
 import { Lock, ShieldCheck } from "lucide-react";
 import { CustomNotification } from "@/components/notifications/CustomNotification";
 import { FormPasswordInput } from "@/components/ui/form-fields";
-import { ResetPasswordSchema } from "@/lib/schemas/auth.schema";
+import { ResetPasswordSchema } from "@/schemas/auth.schema";
 import { resetPassword } from "@/services/auth";
 
 export default function ResetPasswordPage() {

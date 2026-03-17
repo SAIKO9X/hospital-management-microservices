@@ -49,6 +49,7 @@ import { AdminInsurancePage } from "@/features/admin/pages/AdminInsurancePage";
 import AuditLogsPage from "@/features/admin/pages/AuditLogsPage";
 import ForgotPasswordPage from "@/features/auth/pages/ForgotPasswordPage";
 import ResetPasswordPage from "@/features/auth/pages/ResetPasswordPage";
+import ChangePasswordPage from "@/features/auth/pages/ChangePasswordPage";
 
 export const AppRoutes = () => {
   return (
@@ -108,6 +109,7 @@ export const AppRoutes = () => {
                 element={<PatientViewDoctorProfilePage />}
               />
               <Route path="messages" element={<PatientMessagesPage />} />
+              <Route path="change-password" element={<ChangePasswordPage />} />
             </Route>
           </Route>
 
@@ -143,6 +145,7 @@ export const AppRoutes = () => {
                 element={<PatientMedicalHistoryPage />}
               />
               <Route path="messages" element={<DoctorMessagesPage />} />
+              <Route path="change-password" element={<ChangePasswordPage />} />
             </Route>
           </Route>
         </Route>
@@ -190,6 +193,7 @@ export const AppRoutes = () => {
               path="users/doctor/:id/history"
               element={<AdminDoctorHistoryPage />}
             />
+            <Route path="change-password" element={<ChangePasswordPage />} />
           </Route>
         </Route>
       </Route>

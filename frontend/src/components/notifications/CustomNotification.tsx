@@ -9,6 +9,7 @@ interface NotificationProps {
   autoHide?: boolean;
   autoHideDelay?: number;
   onDismiss?: () => void;
+  className?: string;
 }
 
 const notificationConfig = {

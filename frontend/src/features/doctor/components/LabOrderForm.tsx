@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   LabOrderSchema,
   type LabOrderFormData,
-} from "@/lib/schemas/labOrder.schema";
+} from "@/schemas/labOrder.schema";
 import { Button } from "@/components/ui/button";
 import {
   Form,

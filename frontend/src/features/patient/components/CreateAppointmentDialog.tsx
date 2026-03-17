@@ -7,7 +7,7 @@ import {
   AppointmentFormSchema,
   type AppointmentFormInput,
   type AppointmentFormData,
-} from "@/lib/schemas/appointment.schema";
+} from "@/schemas/appointment.schema";
 import {
   useDoctorsDropdown,
   useAvailableSlots,

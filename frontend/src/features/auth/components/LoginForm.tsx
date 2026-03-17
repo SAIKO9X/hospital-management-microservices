@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { LoginSchema } from "@/lib/schemas/auth.schema";
+import { LoginSchema } from "@/schemas/auth.schema";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { Mail, Lock, AlertCircle, ArrowRight, Timer } from "lucide-react";
 import type { NotificationState } from "@/features/auth/pages/AuthPage";

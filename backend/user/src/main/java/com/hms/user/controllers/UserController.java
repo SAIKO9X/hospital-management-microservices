@@ -4,10 +4,7 @@ import com.hms.common.dto.response.PagedResponse;
 import com.hms.common.dto.response.ResponseWrapper;
 import com.hms.common.security.Auditable;
 import com.hms.user.docs.UserControllerDocs;
-import com.hms.user.dto.request.AdminCreateUserRequest;
-import com.hms.user.dto.request.AdminUpdateUserRequest;
-import com.hms.user.dto.request.UserRequest;
-import com.hms.user.dto.request.UserStatusUpdateRequest;
+import com.hms.user.dto.request.*;
 import com.hms.user.dto.response.UserResponse;
 import com.hms.user.services.UserService;
 import jakarta.validation.Valid;
@@ -45,6 +42,12 @@ public class UserController implements UserControllerDocs {
   public ResponseEntity<ResponseWrapper<UserResponse>> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
     UserResponse updatedUser = userService.updateUser(id, request);
     return ResponseEntity.ok(ResponseWrapper.success(updatedUser));
+  }
+
+  @PutMapping("/{id}/change-password")
+  public ResponseEntity<ResponseWrapper<Void>> changePassword(@PathVariable Long id, @Valid @RequestBody ChangePasswordRequest request) {
+    userService.changePassword(id, request.oldPassword(), request.newPassword());
+    return ResponseEntity.ok(ResponseWrapper.success(null, "Senha alterada com sucesso."));
   }
 
   @PatchMapping("/{id}/status")

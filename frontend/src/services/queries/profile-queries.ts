@@ -11,7 +11,7 @@ import type { DoctorProfile } from "@/types/doctor.types";
 import type {
   PatientProfileFormData,
   DoctorProfileFormData,
-} from "@/lib/schemas/profile.schema";
+} from "@/schemas/profile.schema";
 
 type Profile = PatientProfile | DoctorProfile;
 type ProfileFormData = PatientProfileFormData | DoctorProfileFormData;

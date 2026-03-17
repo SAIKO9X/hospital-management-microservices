@@ -15,7 +15,7 @@ import {
 import { uploadFile } from "@/services/media";
 import { getDoctorReviews, getDoctorStats } from "@/services/profile";
 import type { DoctorProfile } from "@/types/doctor.types";
-import type { DoctorProfileFormData } from "@/lib/schemas/profile.schema";
+import type { DoctorProfileFormData } from "@/schemas/profile.schema";
 
 const API_BASE_URL = "http://localhost:9000";
 

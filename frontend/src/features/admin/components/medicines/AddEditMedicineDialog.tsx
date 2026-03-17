@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   MedicineFormSchema,
   type MedicineFormData,
-} from "@/lib/schemas/medicine.schema";
+} from "@/schemas/medicine.schema";
 import {
   useAddMedicine,
   useUpdateMedicine,

@@ -23,10 +23,6 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
-app:
-  security:
-    encryption-key: ${ENCRYPTION_KEY:ThisIsAFixedKeyForEncryption32Ch}
-
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: ${SPRING_RABBITMQ_PORT:5672}
@@ -72,3 +68,7 @@ resilience4j:
       profileService:
         maxAttempts: 3
         waitDuration: 1s
+
+app:
+  security:
+    encryption-key: ${ENCRYPTION_KEY:ThisIsAFixedKeyForEncryption32Ch}

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileInfoTable } from "@/features/patient/components/ProfileInfoTable";
-import type { PatientProfileFormData } from "@/lib/schemas/profile.schema";
+import type { PatientProfileFormData } from "@/schemas/profile.schema";
 import { EditProfileDialog } from "@/features/patient/components/EditProfileDialog";
 import { CustomNotification } from "@/components/notifications/CustomNotification";
 import {
@@ -143,7 +143,7 @@ export const PatientProfilePage = () => {
   ];
 
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;

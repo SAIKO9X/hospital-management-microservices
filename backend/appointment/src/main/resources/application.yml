@@ -35,10 +35,6 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
-app:
-  security:
-    encryption-key: ${ENCRYPTION_KEY:ThisIsAFixedKeyForEncryption32Ch}
-
 application:
   frontend:
     url: ${FRONTEND_URL:http://localhost:5173}
@@ -94,3 +90,7 @@ resilience4j:
       userService:
         maxAttempts: 3
         waitDuration: 1s
+
+app:
+  security:
+    encryption-key: ${ENCRYPTION_KEY:ThisIsAFixedKeyForEncryption32Ch}

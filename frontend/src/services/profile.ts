@@ -3,7 +3,7 @@ import type { ApiResponse } from "@/types/api.types";
 import type {
   PatientProfileFormData,
   DoctorProfileFormData,
-} from "@/lib/schemas/profile.schema";
+} from "@/schemas/profile.schema";
 import type { DoctorProfile } from "@/types/doctor.types";
 import type { Page } from "@/types/pagination.types";
 import type { PatientProfile } from "@/types/patient.types";

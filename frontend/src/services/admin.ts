@@ -1,5 +1,5 @@
 import api from "@/config/axios";
-import type { AdminCreateUserFormData } from "@/lib/schemas/admin.schema";
+import type { AdminCreateUserFormData } from "@/schemas/admin.schema";
 import type { ApiResponse } from "@/types/api.types";
 import type { AuditLogResponse } from "@/types/admin.types";
 import type { AppointmentDetail } from "@/types/appointment.types";

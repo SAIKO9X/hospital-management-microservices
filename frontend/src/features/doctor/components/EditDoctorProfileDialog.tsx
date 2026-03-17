@@ -6,7 +6,7 @@ import {
   DoctorProfileSchema,
   type DoctorProfileFormData,
   type DoctorProfileFormInput,
-} from "@/lib/schemas/profile.schema";
+} from "@/schemas/profile.schema";
 import { maskPhone } from "@/utils/masks";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";

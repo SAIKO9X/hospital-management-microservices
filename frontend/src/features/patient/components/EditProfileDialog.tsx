@@ -8,7 +8,7 @@ import { maskCPF, maskPhone } from "@/utils/masks";
 import {
   PatientProfileSchema,
   type PatientProfileFormData,
-} from "@/lib/schemas/profile.schema";
+} from "@/schemas/profile.schema";
 import {
   FormInput,
   FormSelect,

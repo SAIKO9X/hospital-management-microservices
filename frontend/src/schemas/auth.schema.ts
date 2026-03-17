@@ -56,6 +56,24 @@ export const ResetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const ChangePasswordSchema = z
+  .object({
+    oldPassword: z.string().min(1, "A senha atual é obrigatória"),
+    newPassword: z
+      .string()
+      .min(8, "A nova senha deve ter pelo menos 8 caracteres")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/,
+        "A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número",
+      ),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
+
+export type ChangePasswordData = z.infer<typeof ChangePasswordSchema>;
 export type ForgotPasswordData = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordData = z.infer<typeof ResetPasswordSchema>;
 export type LoginData = z.infer<typeof LoginSchema>;

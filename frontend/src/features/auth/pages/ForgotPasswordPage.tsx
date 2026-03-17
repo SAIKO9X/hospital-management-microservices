@@ -16,7 +16,7 @@ import {
 import { Mail, ArrowLeft, Send } from "lucide-react";
 import { CustomNotification } from "@/components/notifications/CustomNotification";
 import { FormInputWithIcon } from "@/components/ui/form-fields";
-import { ForgotPasswordSchema } from "@/lib/schemas/auth.schema";
+import { ForgotPasswordSchema } from "@/schemas/auth.schema";
 import { forgotPassword } from "@/services/auth";
 
 export default function ForgotPasswordPage() {

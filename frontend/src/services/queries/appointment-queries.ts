@@ -10,17 +10,17 @@ import type {
   DoctorUnavailabilityRequest,
 } from "@/types/appointment.types";
 import type { MedicalDocumentCreateRequest } from "@/types/document.types";
-import type { AppointmentFormData } from "@/lib/schemas/appointment.schema";
+import type { AppointmentFormData } from "@/schemas/appointment.schema";
 import type {
   AppointmentRecordFormData,
   AppointmentRecordUpdateData,
-} from "@/lib/schemas/record.schema";
+} from "@/schemas/record.schema";
 import type {
   PrescriptionFormData,
   PrescriptionUpdateData,
-} from "@/lib/schemas/prescription.schema";
-import type { HealthMetricFormData } from "@/lib/schemas/healthMetric.schema";
-import type { LabOrderFormData } from "@/lib/schemas/labOrder.schema";
+} from "@/schemas/prescription.schema";
+import type { HealthMetricFormData } from "@/schemas/healthMetric.schema";
+import type { LabOrderFormData } from "@/schemas/labOrder.schema";
 import type { Page } from "@/types/pagination.types";
 import type { PatientSummary } from "@/types/doctor.types";
 import { getAvailableSlots } from "../appointment";

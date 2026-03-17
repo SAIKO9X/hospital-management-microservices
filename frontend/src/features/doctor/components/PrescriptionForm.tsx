@@ -5,7 +5,7 @@ import {
   PrescriptionUpdateSchema,
   type PrescriptionFormData,
   type PrescriptionUpdateData,
-} from "@/lib/schemas/prescription.schema";
+} from "@/schemas/prescription.schema";
 import {
   useCreatePrescription,
   useUpdatePrescription,

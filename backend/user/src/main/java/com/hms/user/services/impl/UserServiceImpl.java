@@ -101,46 +101,23 @@ public class UserServiceImpl implements UserService {
     return AuthResponse.create(UserResponse.fromEntity(user), expirationTime, accessToken, refreshToken);
   }
 
-  private void validateAccountLock(User user) {
-    if (user.getAccountLockedUntil() != null) {
-      if (user.getAccountLockedUntil().isAfter(LocalDateTime.now())) {
-        long minutesLeft = java.time.Duration.between(LocalDateTime.now(), user.getAccountLockedUntil()).toMinutes();
-        throw new InvalidOperationException("Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em " + (minutesLeft > 0 ? minutesLeft : 1) + " minuto(s).");
-      } else {
-        user.setAccountLockedUntil(null);
-        user.setFailedLoginAttempts(0);
-        userRepository.save(user);
-      }
-    }
-  }
+  @Override
+  @Transactional
+  public void changePassword(Long id, String oldPassword, String newPassword) {
+    User user = findUserByIdOrThrow(id);
 
-  private void handleFailedLogin(User user) {
-    int attempts = user.getFailedLoginAttempts() + 1;
-    user.setFailedLoginAttempts(attempts);
-
-    if (attempts >= 5) {
-      user.setAccountLockedUntil(LocalDateTime.now().plusMinutes(15));
-      userRepository.save(user);
-      throw new InvalidOperationException("Muitas tentativas incorretas. Conta bloqueada por 15 minutos.");
+    if (!encoder.matches(oldPassword, user.getPassword())) {
+      throw new InvalidOperationException("A senha atual informada está incorreta.");
     }
+
+    user.setPassword(encoder.encode(newPassword));
+
+    // invalida o refresh token atual para forçar o deslogamento em outros dispositivos
+    user.setRefreshToken(null);
+
     userRepository.save(user);
   }
 
-  private void resetFailedAttempts(User user) {
-    if (user.getFailedLoginAttempts() > 0) {
-      user.setFailedLoginAttempts(0);
-      user.setAccountLockedUntil(null);
-    }
-  }
-
-  private void checkAndLogNewDevice(User user, String ipAddress, String currentDeviceId) {
-    boolean isNewDeviceOrIp = (user.getLastIpAddress() != null && !user.getLastIpAddress().equals(ipAddress)) ||
-            (user.getLastDeviceId() != null && !user.getLastDeviceId().equals(currentDeviceId));
-
-    if (isNewDeviceOrIp) {
-      log.warn("Alerta de Segurança: Novo login detectado na sua conta. IP: {}", ipAddress);
-    }
-  }
 
   @Override
   public AuthResponse refreshToken(String incomingRefreshToken) {
@@ -321,10 +298,9 @@ public class UserServiceImpl implements UserService {
     User user = userRepository.findByEmail(email)
       .orElseThrow(() -> new ResourceNotFoundException("Usuário", email));
 
-    // --- PROTEÇÃO CONTRA SPAM ---
+    // proteção contra spam: só permite 3 solicitações de reset a cada 24 horas
     LocalDateTime now = LocalDateTime.now();
 
-    // se ele já pediu reset nas últimas 24 horas...
     if (user.getLastPasswordResetRequest() != null && user.getLastPasswordResetRequest().isAfter(now.minusHours(24))) {
       if (user.getPasswordResetRequests() >= 3) {
         throw new InvalidOperationException("Limite de solicitações excedido. Você só pode solicitar a recuperação de senha 3 vezes a cada 24 horas.");
@@ -380,6 +356,47 @@ public class UserServiceImpl implements UserService {
     user.setRefreshToken(null);
 
     userRepository.save(user);
+  }
+
+  private void validateAccountLock(User user) {
+    if (user.getAccountLockedUntil() != null) {
+      if (user.getAccountLockedUntil().isAfter(LocalDateTime.now())) {
+        long minutesLeft = java.time.Duration.between(LocalDateTime.now(), user.getAccountLockedUntil()).toMinutes();
+        throw new InvalidOperationException("Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em " + (minutesLeft > 0 ? minutesLeft : 1) + " minuto(s).");
+      } else {
+        user.setAccountLockedUntil(null);
+        user.setFailedLoginAttempts(0);
+        userRepository.save(user);
+      }
+    }
+  }
+
+  private void handleFailedLogin(User user) {
+    int attempts = user.getFailedLoginAttempts() + 1;
+    user.setFailedLoginAttempts(attempts);
+
+    if (attempts >= 5) {
+      user.setAccountLockedUntil(LocalDateTime.now().plusMinutes(15));
+      userRepository.save(user);
+      throw new InvalidOperationException("Muitas tentativas incorretas. Conta bloqueada por 15 minutos.");
+    }
+    userRepository.save(user);
+  }
+
+  private void resetFailedAttempts(User user) {
+    if (user.getFailedLoginAttempts() > 0) {
+      user.setFailedLoginAttempts(0);
+      user.setAccountLockedUntil(null);
+    }
+  }
+
+  private void checkAndLogNewDevice(User user, String ipAddress, String currentDeviceId) {
+    boolean isNewDeviceOrIp = (user.getLastIpAddress() != null && !user.getLastIpAddress().equals(ipAddress)) ||
+      (user.getLastDeviceId() != null && !user.getLastDeviceId().equals(currentDeviceId));
+
+    if (isNewDeviceOrIp) {
+      log.warn("Alerta de Segurança: Novo login detectado na sua conta. IP: {}", ipAddress);
+    }
   }
 
   private User findUserByIdOrThrow(Long id) {

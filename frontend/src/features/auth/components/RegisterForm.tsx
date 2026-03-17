@@ -17,7 +17,7 @@ import { CardContent, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Mail, Lock, User } from "lucide-react";
 import { CustomNotification } from "../../../components/notifications/CustomNotification";
-import { RegisterFormSchema } from "@/lib/schemas/auth.schema";
+import { RegisterFormSchema } from "@/schemas/auth.schema";
 import { registerUser } from "@/services/auth";
 import { maskCPF } from "@/utils/masks";
 import { useNavigate } from "react-router";

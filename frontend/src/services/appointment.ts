@@ -1,14 +1,14 @@
 import api from "@/config/axios";
-import type { HealthMetricFormData } from "@/lib/schemas/healthMetric.schema";
-import type { LabOrderFormData } from "@/lib/schemas/labOrder.schema";
+import type { HealthMetricFormData } from "@/schemas/healthMetric.schema";
+import type { LabOrderFormData } from "@/schemas/labOrder.schema";
 import type {
   PrescriptionFormData,
   PrescriptionUpdateData,
-} from "@/lib/schemas/prescription.schema";
+} from "@/schemas/prescription.schema";
 import type {
   AppointmentRecordFormData,
   AppointmentRecordUpdateData,
-} from "@/lib/schemas/record.schema";
+} from "@/schemas/record.schema";
 import type { ApiResponse } from "@/types/api.types"; // Certifique-se de que este tipo existe
 import type {
   AdverseEffectReport,

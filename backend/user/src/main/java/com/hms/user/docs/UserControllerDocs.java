@@ -2,10 +2,7 @@ package com.hms.user.docs;
 
 import com.hms.common.dto.response.PagedResponse;
 import com.hms.common.dto.response.ResponseWrapper;
-import com.hms.user.dto.request.AdminCreateUserRequest;
-import com.hms.user.dto.request.AdminUpdateUserRequest;
-import com.hms.user.dto.request.UserRequest;
-import com.hms.user.dto.request.UserStatusUpdateRequest;
+import com.hms.user.dto.request.*;
 import com.hms.user.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -90,5 +87,16 @@ public interface UserControllerDocs {
   @ApiResponse(responseCode = "200", description = "Página de usuários recuperada")
   ResponseEntity<ResponseWrapper<PagedResponse<UserResponse>>> getAllUsers(
     @Parameter(hidden = true) Pageable pageable
+  );
+
+  @Operation(summary = "Alterar senha", description = "Permite ao usuário autenticado alterar sua própria senha.", security = @SecurityRequirement(name = "bearerAuth"))
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Senha alterada com sucesso"),
+    @ApiResponse(responseCode = "400", description = "Dados inválidos ou senha atual incorreta", content = @Content),
+    @ApiResponse(responseCode = "404", description = "Usuário não encontrado", content = @Content)
+  })
+  ResponseEntity<ResponseWrapper<Void>> changePassword(
+    @Parameter(description = "ID do usuário", required = true) @PathVariable Long id,
+    @Valid @RequestBody ChangePasswordRequest request
   );
 }

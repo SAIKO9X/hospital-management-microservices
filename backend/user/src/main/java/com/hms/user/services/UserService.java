@@ -41,4 +41,7 @@ public interface UserService {
 
   @Transactional
   void resetPassword(String token, String newPassword);
+
+  @Transactional
+  void changePassword(Long id, String oldPassword, String newPassword);
 }
