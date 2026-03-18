@@ -1,13 +1,9 @@
 package com.hms.appointment.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_events")
@@ -19,7 +15,8 @@ import java.util.UUID;
 public class OutboxEvent {
 
   @Id
-  private UUID id;
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
   @Column(name = "aggregate_type", nullable = false)
   private String aggregateType;
@@ -39,4 +36,3 @@ public class OutboxEvent {
   @Column(nullable = false)
   private boolean processed;
 }
-

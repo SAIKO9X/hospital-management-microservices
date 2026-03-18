@@ -1,5 +1,5 @@
 CREATE TABLE outbox_events (
-    id UUID PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     aggregate_type VARCHAR(255) NOT NULL, -- ex: 'Appointment'
     aggregate_id VARCHAR(255) NOT NULL,   -- O ID da consulta
     event_type VARCHAR(255) NOT NULL,     -- ex: 'AppointmentStatusChangedEvent'
@@ -9,5 +9,4 @@ CREATE TABLE outbox_events (
 );
 
 -- Índice para acelerar a busca do Scheduler
-CREATE INDEX idx_outbox_unprocessed ON outbox_events(created_at) WHERE processed = false;
-
+CREATE INDEX idx_outbox_unprocessed ON outbox_events(processed, created_at);

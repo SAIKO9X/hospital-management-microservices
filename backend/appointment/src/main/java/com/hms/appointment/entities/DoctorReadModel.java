@@ -22,4 +22,5 @@ public class DoctorReadModel {
   private String fullName;
   private String specialization;
   private String profilePicture;
+  private String biography;
 }

@@ -12,14 +12,14 @@
 -- ============================================================
 -- 1. READ MODEL DE MÉDICOS E PACIENTES (Projeções)
 -- ============================================================
-INSERT IGNORE INTO doctor_read_model (doctor_id, user_id, full_name, specialization, profile_picture)
+INSERT IGNORE INTO doctor_read_model (doctor_id, user_id, full_name, specialization, profile_picture, biography)
 VALUES
-    (1, 2, 'Doctor Demo',               'Clínica Geral',   NULL),
-    (2, 4, 'Dr. Carlos Eduardo Ribeiro','Cardiologia',      NULL),
-    (3, 5, 'Dra. Ana Paula Ferreira',   'Pediatria',        NULL),
-    (4, 6, 'Dr. Roberto Nascimento',    'Ortopedia',        NULL),
-    (5, 7, 'Dra. Mariana Cavalcante',   'Dermatologia',     NULL),
-    (6, 8, 'Dr. Paulo Henrique Almeida','Neurologia',       NULL);
+    (1, 2, 'Doctor Demo',               'Clínica Geral',   NULL, 'Bio: Médico generalista com foco em prevenção.'),
+    (2, 4, 'Dr. Carlos Eduardo Ribeiro','Cardiologia',      NULL, 'Bio: Especialista em saúde cardiovascular e prevenção de riscos.'),
+    (3, 5, 'Dra. Ana Paula Ferreira',   'Pediatria',        NULL, 'Bio: Dedicada ao cuidado integral da criança e adolescente.'),
+    (4, 6, 'Dr. Roberto Nascimento',    'Ortopedia',        NULL, 'Bio: Especialista em traumatologia e medicina esportiva.'),
+    (5, 7, 'Dra. Mariana Costa',        'Dermatologia',     NULL, 'Bio: Foco em tratamentos clínicos e estéticos da pele.'),
+    (6, 8, 'Dr. Paulo Mendes',          'Neurologia',       NULL, 'Bio: Tratamento de distúrbios neurológicos e dores crônicas.');
 
 INSERT IGNORE INTO patient_read_model (patient_id, user_id, full_name, phone_number, email, profile_picture)
 VALUES

@@ -31,7 +31,6 @@ public class DoctorUnavailabilityServiceImpl implements DoctorUnavailabilityServ
   private final DoctorReadModelRepository doctorReadModelRepository;
   private final ProfileFeignClient profileFeignClient;
 
-  // Tenta resolver o doctorId a partir do userId, e se não encontrar, assume que o ID fornecido é o doctorId
   private Long resolveDoctorId(Long userId) {
     return doctorReadModelRepository.findByUserId(userId)
       .map(DoctorReadModel::getDoctorId)

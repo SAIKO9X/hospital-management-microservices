@@ -10,9 +10,9 @@
 
 -- Médico Base (Demo)
 INSERT IGNORE INTO tb_doctors (
-    user_id, name, crm_number, specialization, department, years_of_experience, consultation_fee
+    user_id, name, crm_number, specialization, department, years_of_experience, consultation_fee, biography
 ) VALUES (
-    2, 'Doctor Demo', 'CRM-SP-123456', 'Clínica Geral', 'Ambulatório', 5, 150.00
+    2, 'Doctor Demo', 'CRM-SP-123456', 'Clínica Geral', 'Ambulatório', 5, 150.00, 'Bio: Médico generalista com foco em prevenção e atendimento humanizado.'
 );
 
 -- Demais Médicos

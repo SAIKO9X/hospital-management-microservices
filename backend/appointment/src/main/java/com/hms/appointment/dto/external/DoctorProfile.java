@@ -6,6 +6,7 @@ public record DoctorProfile(
   String name,
   String crmNumber,
   String specialization,
-  String email
+  String email,
+  String biography
 ) {
 }

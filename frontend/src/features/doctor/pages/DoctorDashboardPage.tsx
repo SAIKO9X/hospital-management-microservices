@@ -77,12 +77,12 @@ export const DoctorDashboardPage = () => {
 
       {!isCheckingProfile && isProfileIncomplete && (
         <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200">
-          <TriangleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-          <AlertTitle className="text-lg font-semibold text-amber-800 dark:text-amber-300 ml-2">
+          <AlertTitle className="text-lg font-semibold text-amber-800 dark:text-amber-300 flex gap-2 items-center">
+            <TriangleAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             Atenção: Ação Necessária!
           </AlertTitle>
           <AlertDescription className="mt-2 ml-2">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between w-full">
               <div className="text-sm">
                 <p>
                   Para aparecer na lista de agendamentos e receber consultas,
@@ -104,7 +104,7 @@ export const DoctorDashboardPage = () => {
               <Button
                 onClick={handleFixProfile}
                 variant="outline"
-                className="whitespace-nowrap border-amber-600 text-amber-700 hover:bg-amber-100 hover:text-amber-900 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-900/50"
+                className="self-start md:self-center whitespace-nowrap border-amber-600 text-amber-700 hover:bg-amber-100 hover:text-amber-900 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-400"
               >
                 Resolver Agora
                 <ArrowRight className="ml-2 h-4 w-4" />

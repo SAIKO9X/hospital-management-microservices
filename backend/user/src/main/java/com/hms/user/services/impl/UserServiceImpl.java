@@ -20,6 +20,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -49,11 +50,12 @@ public class UserServiceImpl implements UserService {
   private final AuthenticationManager authenticationManager;
   private final RabbitTemplate rabbitTemplate;
   private final ProfileFeignClient profileFeignClient;
-  
+
   private final Random random = new Random();
 
   @Lazy
-  private final UserService self;
+  @Autowired
+  private UserService self;
 
   @Value("${application.rabbitmq.exchange}")
   private String exchange;

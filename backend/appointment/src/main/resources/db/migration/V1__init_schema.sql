@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS doctor_read_model (
     full_name       VARCHAR(255)    NULL,
     specialization  VARCHAR(255)    NULL,
     profile_picture VARCHAR(500)    NULL,
+    biography       TEXT            NULL,
 
     CONSTRAINT pk_doctor_read_model PRIMARY KEY (doctor_id)
 );

@@ -21,6 +21,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ import java.util.UUID;
 
 @Service
 @Slf4j
+@lombok.RequiredArgsConstructor
 public class BillingServiceImpl implements BillingService {
 
   private final InvoiceRepository invoiceRepository;
@@ -44,25 +46,10 @@ public class BillingServiceImpl implements BillingService {
   private final InsuranceProviderRepository providerRepository;
   private final ProfileFeignClient profileClient;
   private final RabbitTemplate rabbitTemplate;
-  private final BillingService self;
 
-  public BillingServiceImpl(
-    InvoiceRepository invoiceRepository,
-    PatientInsuranceRepository patientInsuranceRepository,
-    PdfGeneratorService pdfGeneratorService,
-    InsuranceProviderRepository providerRepository,
-    ProfileFeignClient profileClient,
-    RabbitTemplate rabbitTemplate,
-    @Lazy BillingService self
-  ) {
-    this.invoiceRepository = invoiceRepository;
-    this.patientInsuranceRepository = patientInsuranceRepository;
-    this.pdfGeneratorService = pdfGeneratorService;
-    this.providerRepository = providerRepository;
-    this.profileClient = profileClient;
-    this.rabbitTemplate = rabbitTemplate;
-    this.self = self;
-  }
+  @Autowired
+  @Lazy
+  private BillingService self;
 
   @Value("${application.rabbitmq.exchanges.internal}")
   private String exchange;

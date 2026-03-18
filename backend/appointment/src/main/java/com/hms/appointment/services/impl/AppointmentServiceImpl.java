@@ -29,8 +29,10 @@ import com.hms.common.exceptions.ResourceNotFoundException;
 import com.hms.common.exceptions.ServiceUnavailableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -48,6 +50,7 @@ import java.util.stream.IntStream;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AppointmentServiceImpl implements AppointmentService {
 
   private static final String AGGREGATE_TYPE_APPOINTMENT = "Appointment";
@@ -64,35 +67,9 @@ public class AppointmentServiceImpl implements AppointmentService {
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
 
-  private final AppointmentService self;
-
-  public AppointmentServiceImpl(
-    AppointmentRepository appointmentRepository,
-    DoctorReadModelRepository doctorReadModelRepository,
-    PatientReadModelRepository patientReadModelRepository,
-    DoctorAvailabilityRepository availabilityRepository,
-    DoctorUnavailabilityRepository unavailabilityRepository,
-    WaitlistRepository waitlistRepository,
-    RabbitTemplate rabbitTemplate,
-    ProfileFeignClient profileFeignClient,
-    UserFeignClient userFeignClient,
-    OutboxEventRepository outboxEventRepository,
-    ObjectMapper objectMapper,
-    @Lazy AppointmentService self
-  ) {
-    this.appointmentRepository = appointmentRepository;
-    this.doctorReadModelRepository = doctorReadModelRepository;
-    this.patientReadModelRepository = patientReadModelRepository;
-    this.availabilityRepository = availabilityRepository;
-    this.unavailabilityRepository = unavailabilityRepository;
-    this.waitlistRepository = waitlistRepository;
-    this.rabbitTemplate = rabbitTemplate;
-    this.profileFeignClient = profileFeignClient;
-    this.userFeignClient = userFeignClient;
-    this.outboxEventRepository = outboxEventRepository;
-    this.objectMapper = objectMapper;
-    this.self = self;
-  }
+  @Autowired
+  @Lazy
+  private AppointmentService self;
 
   @Value("${application.rabbitmq.exchange}")
   private String exchange;
@@ -114,6 +91,7 @@ public class AppointmentServiceImpl implements AppointmentService {
           model.setUserId(ext.userId());
           model.setFullName(ext.name());
           model.setSpecialization(ext.specialization());
+          model.setBiography(ext.biography());
 
           return doctorReadModelRepository.save(model);
         } catch (Exception e) {
@@ -334,7 +312,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         .build();
 
       OutboxEvent outboxEvent = OutboxEvent.builder()
-        .id(UUID.randomUUID())
         .aggregateType(AGGREGATE_TYPE_APPOINTMENT)
         .aggregateId(app.getId().toString())
         .eventType("appointment.saga.started")
@@ -774,7 +751,6 @@ public class AppointmentServiceImpl implements AppointmentService {
       );
 
       OutboxEvent outboxEvent = OutboxEvent.builder()
-        .id(UUID.randomUUID())
         .aggregateType(AGGREGATE_TYPE_APPOINTMENT)
         .aggregateId(app.getId().toString())
         .eventType("appointment.status.changed")
@@ -871,7 +847,6 @@ public class AppointmentServiceImpl implements AppointmentService {
               "WAITLIST_NOTIFICATION", String.valueOf(entry.getId()), event);
 
             OutboxEvent outboxEvent = OutboxEvent.builder()
-              .id(UUID.randomUUID())
               .aggregateType("WaitlistEntry")
               .aggregateId(entry.getId().toString())
               .eventType(RabbitMQConfig.WAITLIST_ROUTING_KEY)

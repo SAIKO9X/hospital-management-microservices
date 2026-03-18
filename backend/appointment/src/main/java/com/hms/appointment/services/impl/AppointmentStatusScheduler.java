@@ -19,8 +19,7 @@ public class AppointmentStatusScheduler {
 
   private final AppointmentRepository appointmentRepository;
 
-  // Executa a cada 30 minutos.
-  // Cron expression: Segundo Minuto Hora Dia Mês DiaDaSemana
+  // cron expression: Segundo Minuto Hora Dia Mês DiaDaSemana
   @Scheduled(cron = "0 0/30 * * * *")
   @Transactional
   public void markMissedAppointments() {
@@ -28,7 +27,7 @@ public class AppointmentStatusScheduler {
 
     LocalDateTime toleranceTime = LocalDateTime.now().minusHours(1);
 
-    // Busca consultas que ainda estão AGENDADAS e são anteriores ao tempo de tolerância
+    // busca consultas que ainda estão AGENDADAS e são anteriores ao tempo de tolerância
     List<Appointment> missedAppointments = appointmentRepository.findByStatusAndAppointmentDateTimeBefore(
       AppointmentStatus.SCHEDULED,
       toleranceTime
@@ -39,7 +38,6 @@ public class AppointmentStatusScheduler {
       return;
     }
 
-    // Atualiza para NO_SHOW "não compareceu"
     for (Appointment appointment : missedAppointments) {
       appointment.setStatus(AppointmentStatus.NO_SHOW);
 
