@@ -16,7 +16,6 @@ import {
   UserPen,
   UserRoundSearch,
   History,
-  Key,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,7 +57,6 @@ export const adminNavGroups: NavGroup[] = [
     label: "Sistema",
     items: [
       { title: "Auditoria", url: "/admin/audit-logs", icon: ShieldCheck },
-      { title: "Alterar Senha", url: "/admin/change-password", icon: Key },
     ],
   },
 ];
@@ -136,12 +134,6 @@ export const doctorNavGroups: NavGroup[] = [
         icon: UserPen,
         restricted: false,
       },
-      {
-        title: "Alterar Senha",
-        url: "/doctor/change-password",
-        icon: Key,
-        restricted: false,
-      },
     ],
   },
 ];
@@ -217,12 +209,6 @@ export const patientNavGroups: NavGroup[] = [
         title: "Meu Perfil",
         url: "/patient/profile",
         icon: UserPen,
-        restricted: false,
-      },
-      {
-        title: "Alterar Senha",
-        url: "/patient/change-password",
-        icon: Key,
         restricted: false,
       },
     ],

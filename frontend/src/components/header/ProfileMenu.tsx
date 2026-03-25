@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAppSelector } from "@/store/hooks";
 import { useProfile } from "@/services/queries/profile-queries";
-import { ChevronDown, LogOut, User, SunMoon } from "lucide-react";
+import { ChevronDown, LogOut, User, SunMoon, Key } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router";
 
@@ -43,6 +43,23 @@ export const ProfileMenu = ({ onLogout }: { onLogout: () => void }) => {
         break;
       case "ADMIN":
         navigate("/admin");
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleChangePasswordClick = () => {
+    if (!user) return;
+    switch (user.role) {
+      case "DOCTOR":
+        navigate("/doctor/change-password");
+        break;
+      case "PATIENT":
+        navigate("/patient/change-password");
+        break;
+      case "ADMIN":
+        navigate("/admin/change-password");
         break;
       default:
         break;
@@ -87,6 +104,14 @@ export const ProfileMenu = ({ onLogout }: { onLogout: () => void }) => {
           >
             <User className="mr-3 h-4 w-4" />
             <span>Perfil</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={handleChangePasswordClick}
+          >
+            <Key className="mr-3 h-4 w-4" />
+            <span>Alterar Senha</span>
           </DropdownMenuItem>
 
           <DropdownMenuSub>
