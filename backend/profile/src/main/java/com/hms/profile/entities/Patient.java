@@ -1,7 +1,6 @@
 package com.hms.profile.entities;
 
 import com.hms.common.util.CryptoConverter;
-import com.hms.common.util.DeterministicCryptoConverter;
 import com.hms.profile.enums.BloodGroup;
 import com.hms.profile.enums.Gender;
 import jakarta.persistence.*;
@@ -27,8 +26,7 @@ public class Patient {
   @Column(unique = true, nullable = false)
   private Long userId;
 
-  @Column(unique = true, nullable = false)
-  @Convert(converter = DeterministicCryptoConverter.class)
+  @Column(name = "cpf", unique = true, length = 14)
   private String cpf;
 
   private LocalDate dateOfBirth;

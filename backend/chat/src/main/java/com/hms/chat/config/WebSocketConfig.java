@@ -1,6 +1,9 @@
 package com.hms.chat.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hms.common.exceptions.AccessDeniedException;
+import com.hms.common.security.BaseJwtService;
+import com.hms.common.security.HmsUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -24,7 +27,6 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import com.hms.common.security.BaseJwtService;
 
 import java.util.Collections;
 import java.util.List;
@@ -78,32 +80,41 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
             try {
               if (baseJwtService.isTokenValid(token)) {
-
                 String username = baseJwtService.extractUsername(token);
-
                 Long userId = baseJwtService.extractClaim(token, claims -> claims.get("userId", Long.class));
                 String role = baseJwtService.extractClaim(token, claims -> claims.get("role", String.class));
-
-                String principalName = (userId != null) ? String.valueOf(userId) : username;
 
                 var authorities = Collections.singletonList(
                   new SimpleGrantedAuthority("ROLE_" + role)
                 );
 
+                HmsUserPrincipal principal = HmsUserPrincipal.builder()
+                  .id(userId)
+                  .email(username)
+                  .role(role)
+                  .authorities(authorities)
+                  .build();
+
                 Authentication auth = new UsernamePasswordAuthenticationToken(
-                  principalName,
+                  principal,
                   null,
                   authorities
                 );
 
                 accessor.setUser(auth);
-                log.info("✅ WebSocket autenticado para userId: {}", userId);
+                log.info("WebSocket autenticado para userId: {}", userId);
+
+                // retorna a mensagem para continuar o fluxo normal
+                return message;
               }
             } catch (Exception e) {
-              log.error("❌ Erro na autenticação WS: {}", e.getMessage());
+              log.error("Erro na autenticação WS: {}", e.getMessage());
             }
           }
+          log.warn("Tentativa de conexão WebSocket recusada. Token inválido ou ausente.");
+          throw new AccessDeniedException("Token JWT inválido ou ausente na conexão WebSocket.");
         }
+
         return message;
       }
     });
