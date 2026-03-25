@@ -43,24 +43,54 @@ export const DoctorAppointmentsPage = () => {
   const rescheduleMutation = useMutation({
     mutationFn: ({ id, newDate }: { id: number; newDate: string }) =>
       rescheduleAppointment(id, newDate),
+
+    onMutate: async ({ id, newDate }) => {
+      await queryClient.cancelQueries();
+      const queryKey = ["doctorAppointmentDetails"];
+      const previousAppointments = queryClient.getQueryData(queryKey);
+      queryClient.setQueryData(queryKey, (oldData: any) => {
+        if (!oldData) return oldData;
+
+        const isArray = Array.isArray(oldData);
+        const dataList = isArray ? oldData : oldData.data;
+
+        const newDataList = dataList.map((app: any) => {
+          if (app.id === id) {
+            return { ...app, appointmentDateTime: newDate };
+          }
+          return app;
+        });
+
+        return isArray ? newDataList : { ...oldData, data: newDataList };
+      });
+
+      return { previousAppointments, queryKey };
+    },
+
     onSuccess: () => {
       setNotification({
         show: true,
         variant: "success",
         title: "Consulta remarcada com sucesso!",
       });
-      queryClient.invalidateQueries({ queryKey: ["doctorAppointmentDetails"] });
+      queryClient.invalidateQueries();
     },
-    onError: (error: any) => {
+
+    // se der erro no back, volta pro estado anterior
+    onError: (error: any, _variables, context: any) => {
+      if (context?.previousAppointments) {
+        queryClient.setQueryData(
+          context.queryKey,
+          context.previousAppointments,
+        );
+      }
       setNotification({
         show: true,
         variant: "error",
         title: "Erro ao remarcar consulta",
         description:
-          error.response?.data?.message ||
-          "Verifique conflitos de horário na sua agenda.",
+          error.response?.data?.message || "Verifique conflitos de horário.",
       });
-      queryClient.invalidateQueries({ queryKey: ["doctorAppointmentDetails"] });
     },
   });
 

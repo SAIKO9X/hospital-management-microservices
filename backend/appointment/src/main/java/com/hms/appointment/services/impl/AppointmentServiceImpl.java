@@ -138,6 +138,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
   @Override
   @Transactional
+  @CacheEvict(value = "doctor_appointments", allEntries = true)
   public AppointmentResponse createAppointment(Long patientUserId, AppointmentCreateRequest request) {
     PatientReadModel patient = getOrSyncPatient(patientUserId);
 
@@ -221,6 +222,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
   @Override
   @Transactional
+  @CacheEvict(value = "doctor_appointments", allEntries = true)
   public AppointmentResponse rescheduleAppointment(Long appointmentId, LocalDateTime newDateTime, Long requesterUserId) {
     Appointment app = findAppointmentByIdOrThrow(appointmentId);
     validateAccess(app, requesterUserId);
@@ -254,6 +256,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
   @Override
   @Transactional
+  @CacheEvict(value = "doctor_appointments", allEntries = true)
   public AppointmentResponse cancelAppointment(Long appointmentId, Long requesterUserId) {
     Appointment app = findAppointmentByIdOrThrow(appointmentId);
     validateAccess(app, requesterUserId);
