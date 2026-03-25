@@ -20,7 +20,7 @@ export interface PatientInsurance {
 }
 
 export interface Invoice {
-  id: string;
+  id: number;
   appointmentId?: number;
   pharmacySaleId?: number;
   patientId: string;

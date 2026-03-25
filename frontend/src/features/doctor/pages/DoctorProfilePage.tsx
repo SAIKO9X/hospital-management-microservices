@@ -311,7 +311,7 @@ export const DoctorProfilePage = () => {
                       {new Date(review.createdAt).toLocaleDateString("pt-BR")}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 italic">
+                  <p className="text-sm text-foreground italic">
                     "{review.comment || "Sem comentário escrito."}"
                   </p>
                 </div>

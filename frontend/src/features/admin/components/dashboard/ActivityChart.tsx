@@ -19,11 +19,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 const chartConfig = {
   appointments: {
     label: "Consultas",
-    color: "hsl(var(--chart-1))",
+    color: "var(--chart-1)",
   },
   newPatients: {
     label: "Novos Pacientes",
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
   },
 };
 

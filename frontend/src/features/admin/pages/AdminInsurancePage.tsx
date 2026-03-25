@@ -19,7 +19,7 @@ import { BillingService } from "@/services";
 export function AdminInsurancePage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<number | null>(null);
 
   const fetchInvoices = async () => {
     try {
@@ -37,10 +37,10 @@ export function AdminInsurancePage() {
     fetchInvoices();
   }, []);
 
-  const handleProcessPayment = async (id: string) => {
+  const handleProcessPayment = async (id: number) => {
     try {
       setProcessingId(id);
-      await BillingService.processInsurancePayment(id);
+      await BillingService.processInsurancePayment(id.toString());
       toast.success("Repasse de convênio processado com sucesso!");
       setInvoices((prev) => prev.filter((inv) => inv.id !== id));
     } catch (error) {
@@ -108,7 +108,7 @@ export function AdminInsurancePage() {
                       {new Date(inv.issuedAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      {inv.id.substring(0, 8)}...
+                      {inv.id}
                     </TableCell>
                     <TableCell>{inv.patientId}</TableCell>
                     <TableCell className="font-bold text-green-600">
