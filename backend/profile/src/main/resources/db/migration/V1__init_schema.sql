@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS tb_patients (
     date_of_birth               DATE            NULL,
     phone_number                VARCHAR(255)    NULL,
     name                        VARCHAR(255)    NULL,
-    blood_group                 VARCHAR(10)     NULL,
+    blood_group                 VARCHAR(20)     NULL,
     gender                      VARCHAR(20)     NULL,
     address                     VARCHAR(255)    NULL,
     emergency_contact_name      VARCHAR(255)    NULL,
