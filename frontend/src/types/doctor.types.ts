@@ -48,3 +48,6 @@ export interface DoctorSummary {
   profilePicture?: string;
   lastAppointmentDate: string;
 }
+
+export const isDoctorProfile = (profile: unknown): profile is DoctorProfile =>
+  typeof profile === "object" && profile !== null && "crmNumber" in profile;

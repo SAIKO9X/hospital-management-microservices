@@ -48,3 +48,6 @@ export interface AppointmentHistory {
 export interface MedicalHistory {
   appointments: AppointmentHistory[];
 }
+
+export const isPatientProfile = (profile: unknown): profile is PatientProfile =>
+  typeof profile === "object" && profile !== null && "cpf" in profile;

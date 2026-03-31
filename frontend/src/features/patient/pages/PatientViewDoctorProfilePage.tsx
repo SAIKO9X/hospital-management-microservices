@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
-import { toast } from "sonner";
 import {
   Calendar,
   Clock,
@@ -34,6 +33,7 @@ import { ChatSheet } from "@/features/chat/components/ChatSheet";
 import { CreateAppointmentDialog } from "@/features/patient/components/CreateAppointmentDialog";
 import { CreateReviewDialog } from "@/features/patient/components/CreateReviewDialog";
 import { resolveImageUrl } from "@/utils/media";
+import { CustomNotification } from "@/components/notifications/CustomNotification"; // <-- Importação adicionada
 
 export const PatientViewDoctorProfilePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +41,17 @@ export const PatientViewDoctorProfilePage = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isAppointmentOpen, setIsAppointmentOpen] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    variant: "success" | "error" | "info";
+    title: string;
+    description?: string;
+  }>({
+    show: false,
+    variant: "info",
+    title: "",
+  });
 
   const { data: doctor, isLoading: isLoadingDoctor } = useQuery({
     queryKey: ["doctor", doctorId],
@@ -79,16 +90,31 @@ export const PatientViewDoctorProfilePage = () => {
     myReview?.appointmentId ||
     (completedAppointments ? completedAppointments[0]?.id : 0);
 
+  const dismissNotification = () => {
+    setNotification((prev) => ({ ...prev, show: false }));
+  };
+
   const handleAppointmentSubmit = (data: any) => {
     createAppointmentMutation.mutate(data, {
       onSuccess: () => {
         setIsAppointmentOpen(false);
-        toast.success("Consulta agendada com sucesso!");
+        setNotification({
+          show: true,
+          variant: "success",
+          title: "Consulta agendada com sucesso!",
+          description:
+            "Sua consulta foi agendada. Você receberá uma confirmação em breve.",
+        });
       },
       onError: (error: any) => {
-        toast.error(
-          error.response?.data?.message || "Erro ao agendar consulta.",
-        );
+        setNotification({
+          show: true,
+          variant: "error",
+          title: "Erro ao agendar consulta",
+          description:
+            error.response?.data?.message ||
+            "Ocorreu um erro ao tentar agendar sua consulta.",
+        });
       },
     });
   };
@@ -107,6 +133,17 @@ export const PatientViewDoctorProfilePage = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
+      {notification.show && (
+        <CustomNotification
+          variant={notification.variant}
+          title={notification.title}
+          description={notification.description}
+          onDismiss={dismissNotification}
+          autoHide
+          autoHideDelay={5000}
+        />
+      )}
+
       <Card className="border-none shadow-md bg-gradient-to-r from-blue-50 to-white dark:from-slate-900 dark:to-slate-950">
         <CardContent className="p-8 flex flex-col md:flex-row items-center md:items-start gap-8">
           <Avatar className="h-32 w-32 border-4 border-white shadow-lg">

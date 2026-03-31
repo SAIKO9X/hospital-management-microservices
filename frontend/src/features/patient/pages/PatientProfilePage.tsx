@@ -1,19 +1,81 @@
-import { useRef, useState } from "react";
-import { Edit } from "lucide-react";
-import { type PatientProfile, BloodGroup, Gender } from "@/types/patient.types";
+import { useState } from "react";
+import { Edit, AlertTriangle, Activity, UserRound } from "lucide-react";
+import { isPatientProfile } from "@/types/patient.types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileInfoTable } from "@/features/patient/components/ProfileInfoTable";
-import type { PatientProfileFormData } from "@/schemas/profile.schema";
 import { EditProfileDialog } from "@/features/patient/components/EditProfileDialog";
 import { CustomNotification } from "@/components/notifications/CustomNotification";
-import {
-  useProfile,
-  useUpdateProfilePicture,
-} from "@/services/queries/profile-queries";
-import { uploadFile } from "@/services/media";
+import { useProfile } from "@/services/queries/profile-queries";
+import { useActionNotification } from "@/hooks/useActionNotification";
+import { useProfilePictureUpload } from "@/hooks/useProfilePictureUpload";
+import { parseListField } from "@/utils/profile";
+import { resolveImageUrl } from "@/utils/media";
+import type { PatientProfileFormData } from "@/schemas/profile.schema";
+import { buildPatientInfoSections } from "@/utils/patientInfoSections";
+
+// ─── Skeleton ────────────────────────────────────────────────────────────────
+
+const PatientProfileSkeleton = () => (
+  <div className="container mx-auto p-4 space-y-8">
+    {/* Profile card skeleton */}
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <Skeleton className="h-24 w-24 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2 text-center sm:text-left">
+            <Skeleton className="h-6 w-48 mx-auto sm:mx-0" />
+            <Skeleton className="h-4 w-36 mx-auto sm:mx-0" />
+          </div>
+          <Skeleton className="h-9 w-32 shrink-0" />
+        </div>
+      </CardHeader>
+    </Card>
+
+    {/* Grid skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="space-y-8">
+        {[...Array(2)].map((_, i) => (
+          <Card key={`col1-${i}`}>
+            <CardHeader>
+              <Skeleton className="h-5 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[...Array(3)].map((_, j) => (
+                <div key={j} className="flex justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="space-y-8">
+        {[...Array(3)].map((_, i) => (
+          <Card key={`col2-${i}`}>
+            <CardHeader>
+              <Skeleton className="h-5 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[...Array(2)].map((_, j) => (
+                <div key={j} className="flex justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export const PatientProfilePage = () => {
   const {
@@ -28,27 +90,21 @@ export const PatientProfilePage = () => {
   } = useProfile();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [actionNotification, setActionNotification] = useState<{
-    variant: "success" | "error";
-    title: string;
-  } | null>(null);
+  const { notification, notify, dismiss } = useActionNotification();
 
-  const updatePictureMutation = useUpdateProfilePicture();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { fileInputRef, handleFileChange, isUploading } =
+    useProfilePictureUpload(
+      () => notify("success", "Foto de perfil atualizada com sucesso!"),
+      () => notify("error", "Erro ao atualizar a foto"),
+    );
 
   const handleSaveProfile = async (data: PatientProfileFormData) => {
     try {
       await updateProfile(data);
       setIsDialogOpen(false);
-      setActionNotification({
-        variant: "success",
-        title: "Perfil atualizado com sucesso!",
-      });
+      notify("success", "Perfil atualizado com sucesso!");
     } catch (err: any) {
-      setActionNotification({
-        variant: "error",
-        title: err.message || "Não foi possível salvar as alterações.",
-      });
+      notify("error", err.message || "Não foi possível salvar as alterações.");
     }
   };
 
@@ -60,9 +116,7 @@ export const PatientProfilePage = () => {
     );
   }
 
-  if (isLoading) {
-    return <div className="text-center p-10">Carregando perfil...</div>;
-  }
+  if (isLoading) return <PatientProfileSkeleton />;
 
   if (isError) {
     return (
@@ -78,7 +132,6 @@ export const PatientProfilePage = () => {
     );
   }
 
-  // perfil não encontrado
   if (status === "succeeded" && !profile) {
     return (
       <div className="container mx-auto p-4">
@@ -91,128 +144,76 @@ export const PatientProfilePage = () => {
     );
   }
 
-  // verifica se profile é do tipo PatientProfile
-  const patientProfile = profile as PatientProfile;
+  if (!isPatientProfile(profile)) return null;
 
   const isProfileIncomplete =
-    patientProfile &&
-    (!patientProfile.phoneNumber ||
-      !patientProfile.address ||
-      !patientProfile.dateOfBirth);
+    !profile.phoneNumber || !profile.address || !profile.dateOfBirth;
 
-  const personalInfoData = [
-    { label: "CPF", value: patientProfile?.cpf || "Não informado" },
-    {
-      label: "Data de Nascimento",
-      value: patientProfile?.dateOfBirth
-        ? new Date(patientProfile.dateOfBirth).toLocaleDateString("pt-BR")
-        : "Não informado",
-    },
-    {
-      label: "Telefone",
-      value: patientProfile?.phoneNumber || "Não informado",
-    },
-    { label: "Endereço", value: patientProfile?.address || "Não informado" },
-  ];
-
-  const medicalInfoData = [
-    {
-      label: "Tipo Sanguíneo",
-      value: patientProfile?.bloodGroup
-        ? BloodGroup[patientProfile.bloodGroup] || patientProfile.bloodGroup
-        : "Não informado",
-    },
-    {
-      label: "Gênero",
-      value: patientProfile?.gender
-        ? Gender[patientProfile.gender] || patientProfile.gender
-        : "Não informado",
-    },
-  ];
-
-  const emergencyContactData = [
-    {
-      label: "Nome",
-      value: patientProfile?.emergencyContactName || "Não informado",
-    },
-    {
-      label: "Telefone",
-      value: patientProfile?.emergencyContactPhone || "Não informado",
-    },
-  ];
-
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const mediaResponse = await uploadFile(file);
-      await updatePictureMutation.mutateAsync(mediaResponse.url);
-
-      setActionNotification({
-        variant: "success",
-        title: "Foto de perfil atualizada com sucesso!",
-      });
-    } catch (err: any) {
-      setActionNotification({
-        variant: "error",
-        title: "Erro ao atualizar a foto",
-      });
-    }
-  };
-
-  const API_BASE_URL = "http://localhost:9000"; // URL do Gateway
+  const { personal, medical, emergency } = buildPatientInfoSections(profile);
+  const allergies = parseListField(profile.allergies);
+  const chronicDiseases = parseListField(profile.chronicDiseases);
 
   return (
     <div className="container mx-auto p-4 space-y-8">
-      {/* aviso para perfil incompleto */}
+      {/* Banner de perfil incompleto */}
       {isProfileIncomplete && (
-        <CustomNotification
-          variant="info"
-          title="Complete seu Perfil - Clique em 'Editar Perfil'"
-          description="Seu perfil foi criado com sucesso! Complete suas informações pessoais para poder usar todos os recursos disponíveis."
-          dismissible={false}
-        />
+        <div className="flex items-start gap-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+            <UserRound className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Seu perfil está incompleto
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              Complete suas informações pessoais para poder usar todos os
+              recursos disponíveis.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            Completar agora
+          </Button>
+        </div>
       )}
 
-      {actionNotification && (
+      {notification && (
         <CustomNotification
-          variant={actionNotification.variant}
-          title={actionNotification.title}
+          variant={notification.variant}
+          title={notification.title}
           autoHide
-          onDismiss={() => setActionNotification(null)}
+          onDismiss={dismiss}
         />
       )}
 
+      {/* Card Principal */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative group">
-              <Avatar className="h-24 w-24">
+            {/* Avatar com botão de editar foto visível */}
+            <div className="relative shrink-0">
+              <Avatar className="h-24 w-24 border shadow-sm">
                 <AvatarImage
-                  src={
-                    patientProfile?.profilePictureUrl
-                      ? patientProfile.profilePictureUrl.startsWith("http")
-                        ? patientProfile.profilePictureUrl
-                        : `${API_BASE_URL}${patientProfile.profilePictureUrl}`
-                      : undefined
-                  }
+                  src={resolveImageUrl(profile.profilePictureUrl)}
                   alt="Foto do perfil"
                 />
-                <AvatarFallback className="text-3xl">
+                <AvatarFallback className="text-3xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
                   {user?.name?.charAt(0).toUpperCase() || "P"}
                 </AvatarFallback>
               </Avatar>
               <Button
-                size="sm"
-                variant="outline"
-                className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                size="icon"
+                variant="secondary"
+                className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-md border border-background"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={updatePictureMutation.isPending}
+                disabled={isUploading}
+                title="Alterar foto de perfil"
               >
-                <Edit className="h-3 w-3" />
+                <Edit className="h-4 w-4 text-muted-foreground" />
                 <span className="sr-only">Editar foto</span>
               </Button>
               <input
@@ -223,12 +224,16 @@ export const PatientProfilePage = () => {
                 accept="image/png, image/jpeg, image/gif"
               />
             </div>
-            <div className="flex-1 text-center sm:text-left">
+
+            {/* Informações Resumidas */}
+            <div className="flex-1 text-center sm:text-left space-y-1">
               <CardTitle className="text-2xl">
                 {user?.name || "Nome não informado"}
               </CardTitle>
               <p className="text-muted-foreground">{user?.email}</p>
             </div>
+
+            {/* Botão de Ação */}
             <Button
               variant="outline"
               onClick={() => setIsDialogOpen(true)}
@@ -241,79 +246,76 @@ export const PatientProfilePage = () => {
         </CardHeader>
       </Card>
 
+      {/* Grid de Informações */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div className="space-y-8">
-          <ProfileInfoTable
-            title="Informações Pessoais"
-            data={personalInfoData}
-          />
-          <ProfileInfoTable
-            title="Contato de Emergência"
-            data={emergencyContactData}
-          />
+          <ProfileInfoTable title="Informações Pessoais" data={personal} />
+          <ProfileInfoTable title="Contato de Emergência" data={emergency} />
         </div>
 
         <div className="space-y-8">
           <ProfileInfoTable
             title="Informações Médicas Básicas"
-            data={medicalInfoData}
+            data={medical}
           />
-          <Card>
-            <CardHeader>
-              <CardTitle>Alergias</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {patientProfile?.allergies &&
-              patientProfile.allergies.length > 0 ? (
-                (typeof patientProfile.allergies === "string"
-                  ? patientProfile.allergies.split(",")
-                  : patientProfile.allergies
-                ).map((item: string, index: number) => (
-                  <Badge key={index} variant="secondary">
-                    {item.trim()}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma alergia registrada.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Doenças Crônicas</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {patientProfile?.chronicDiseases &&
-              patientProfile.chronicDiseases.length > 0 ? (
-                (typeof patientProfile.chronicDiseases === "string"
-                  ? patientProfile.chronicDiseases.split(",")
-                  : patientProfile.chronicDiseases
-                ).map((item: string, index: number) => (
-                  <Badge key={index} variant="secondary">
-                    {item.trim()}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma doença crônica registrada.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+
+          <BadgeListCard
+            title="Alergias"
+            icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+            items={allergies}
+            emptyMessage="Nenhuma alergia registrada."
+          />
+          <BadgeListCard
+            title="Doenças Crônicas"
+            icon={<Activity className="h-4 w-4 text-rose-500" />}
+            items={chronicDiseases}
+            emptyMessage="Nenhuma doença crônica registrada."
+          />
         </div>
       </div>
 
-      {/* --- DIALOG DE EDIÇÃO --- */}
-      {patientProfile && (
-        <EditProfileDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          profile={patientProfile}
-          onSave={handleSaveProfile}
-        />
-      )}
+      <EditProfileDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        profile={profile}
+        onSave={handleSaveProfile}
+      />
     </div>
   );
 };
+
+// ─── Sub-componentes locais ───────────────────────────────────────────────────
+
+type BadgeListCardProps = {
+  title: string;
+  icon: React.ReactNode;
+  items: string[];
+  emptyMessage: string;
+};
+
+const BadgeListCard = ({
+  title,
+  icon,
+  items,
+  emptyMessage,
+}: BadgeListCardProps) => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2 text-base">
+        {icon}
+        {title}
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="flex flex-wrap gap-2">
+      {items.length > 0 ? (
+        items.map((item, index) => (
+          <Badge key={index} variant="secondary">
+            {item}
+          </Badge>
+        ))
+      ) : (
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+      )}
+    </CardContent>
+  </Card>
+);

@@ -1,5 +1,6 @@
 package com.hms.notification.consumer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hms.common.dto.event.EventEnvelope;
 import com.hms.notification.config.RabbitMQConfig;
 import com.hms.notification.dto.event.*;
@@ -32,6 +33,7 @@ public class NotificationConsumer {
   private final EmailService emailService;
   private final SpringTemplateEngine templateEngine;
   private final NotificationService notificationService;
+  private final ObjectMapper objectMapper;
 
   @RabbitListener(queues = "${application.rabbitmq.notification-queue}")
   public void consumeGenericEmail(EmailRequest request) {
@@ -41,7 +43,7 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.queues.notification-reminder:notification.reminder.queue}")
   public void handleAppointmentReminder(EventEnvelope<AppointmentEvent> envelope) {
-    AppointmentEvent event = envelope.getPayload();
+    AppointmentEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentEvent.class);
     log.info("Processando lembrete [Evento ID: {}] para consulta ID: {}", envelope.getEventId(), event.appointmentId());
 
     String formattedDate = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
@@ -71,7 +73,7 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.queues.notification-status:notification.status.queue}")
   public void handleStatusChange(EventEnvelope<AppointmentStatusChangedEvent> envelope) {
-    AppointmentStatusChangedEvent event = envelope.getPayload();
+    AppointmentStatusChangedEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentStatusChangedEvent.class);
     String formattedDate = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
     processPatientStatusNotification(event, formattedDate);
@@ -83,7 +85,7 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = RabbitMQConfig.WAITLIST_QUEUE)
   public void handleWaitlistNotification(EventEnvelope<WaitlistNotificationEvent> envelope) {
-    WaitlistNotificationEvent event = envelope.getPayload();
+    WaitlistNotificationEvent event = objectMapper.convertValue(envelope.getPayload(), WaitlistNotificationEvent.class);
 
     // email
     String content = "Surgiu uma vaga com Dr. " + event.doctorName() + " em " + event.availableDateTime();
@@ -100,7 +102,8 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.queues.notification-prescription:notification.prescription.queue}")
   public void handlePrescriptionIssued(EventEnvelope<PrescriptionIssuedEvent> envelope) {
-    PrescriptionIssuedEvent event = envelope.getPayload();
+    PrescriptionIssuedEvent event = objectMapper.convertValue(envelope.getPayload(), PrescriptionIssuedEvent.class);
+
     log.info("Nova receita [Correlation: {}] para paciente ID: {} (UserID: {})",
       envelope.getCorrelationId(), event.patientId(), event.patientUserId());
 
@@ -129,7 +132,8 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.lab-queue-name:notification.lab.completed.queue}")
   public void handleLabResult(EventEnvelope<LabOrderCompletedEvent> envelope) {
-    LabOrderCompletedEvent event = envelope.getPayload();
+    LabOrderCompletedEvent event = objectMapper.convertValue(envelope.getPayload(), LabOrderCompletedEvent.class);
+
     log.info("Resultado de exame pronto. Pedido: {}", event.labOrderNumber());
 
     // notificar Médico
@@ -209,7 +213,8 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.queues.chat-notification:notification.chat.queue}")
   public void handleNewChatMessage(EventEnvelope<ChatMessageEvent> envelope) {
-    ChatMessageEvent event = envelope.getPayload();
+    ChatMessageEvent event = objectMapper.convertValue(envelope.getPayload(), ChatMessageEvent.class);
+
     saveInAppNotification(
       event.recipientId(),
       "Nova Mensagem de " + event.senderName(),
@@ -220,7 +225,8 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.user-created-queue}")
   public void consumeUserCreated(EventEnvelope<UserCreatedEvent> envelope) {
-    UserCreatedEvent event = envelope.getPayload();
+    UserCreatedEvent event = objectMapper.convertValue(envelope.getPayload(), UserCreatedEvent.class);
+
     String subject = "Bem-vindo ao HMS";
     String content = String.format("<h1>Código: %s</h1><p>Use este código para ativar sua conta.</p>", event.verificationCode());
     emailService.sendEmail(event.email(), subject, content);
@@ -228,7 +234,8 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = RabbitMQConfig.STOCK_LOW_QUEUE)
   public void handleLowStockEvent(EventEnvelope<StockLowEvent> envelope) {
-    StockLowEvent event = envelope.getPayload();
+    StockLowEvent event = objectMapper.convertValue(envelope.getPayload(), StockLowEvent.class);
+
     log.info("Recebido alerta de stock baixo para o medicamento: {}", event.medicineName());
 
     Notification notification = new Notification();
@@ -247,7 +254,8 @@ public class NotificationConsumer {
     key = "notification.review.alert"
   ))
   public void handleNewReview(EventEnvelope<ReviewNotificationEvent> envelope) {
-    ReviewNotificationEvent event = envelope.getPayload();
+    ReviewNotificationEvent event = objectMapper.convertValue(envelope.getPayload(), ReviewNotificationEvent.class);
+
     log.info("Nova avaliação recebida para médico ID: {}", event.doctorId());
 
     String message = String.format("O paciente %s avaliou seu atendimento com %d estrela(s).", event.patientName(), event.rating());
@@ -265,7 +273,7 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.queues.password-reset:notification.password.reset.queue}")
   public void handlePasswordReset(EventEnvelope<PasswordResetEvent> envelope) {
-    PasswordResetEvent event = envelope.getPayload();
+    PasswordResetEvent event = objectMapper.convertValue(envelope.getPayload(), PasswordResetEvent.class);
     log.info("Processando envio de e-mail de redefinição de senha para: {}", event.email());
 
     try {
