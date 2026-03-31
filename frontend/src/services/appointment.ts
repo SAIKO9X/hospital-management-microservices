@@ -1,4 +1,5 @@
 import api from "@/config/axios";
+import { format } from "date-fns"; 
 import type { HealthMetricFormData } from "@/schemas/healthMetric.schema";
 import type { LabOrderFormData } from "@/schemas/labOrder.schema";
 import type {
@@ -9,7 +10,7 @@ import type {
   AppointmentRecordFormData,
   AppointmentRecordUpdateData,
 } from "@/schemas/record.schema";
-import type { ApiResponse } from "@/types/api.types"; // Certifique-se de que este tipo existe
+import type { ApiResponse } from "@/types/api.types";
 import type {
   AdverseEffectReport,
   AdverseEffectReportCreateRequest,
@@ -47,11 +48,16 @@ export const cancelAppointment = async (id: number): Promise<Appointment> => {
 
 export const rescheduleAppointment = async (
   id: number,
-  newDateTime: string,
+  newDateTime: string | Date,
 ): Promise<Appointment> => {
+  const formattedDateTime =
+    newDateTime instanceof Date
+      ? format(newDateTime, "yyyy-MM-dd'T'HH:mm:ss")
+      : newDateTime;
+
   const { data } = await api.patch<ApiResponse<Appointment>>(
     `/appointments/${id}/reschedule`,
-    { appointmentDateTime: newDateTime },
+    { appointmentDateTime: formattedDateTime }, 
   );
   return data.data;
 };
@@ -88,7 +94,7 @@ export const getAppointmentRecordByAppointmentId = async (
     const { data } = await api.get<ApiResponse<AppointmentRecord>>(
       `/records/appointment/${appointmentId}`,
     );
-    return data.data ?? null; // CORREÇÃO AQUI
+    return data.data ?? null;
   } catch (error: any) {
     if (error.response?.status === 404) {
       return null;
@@ -271,7 +277,7 @@ export const addDoctorAvailability = async (
 
 export const deleteDoctorAvailability = async (id: number): Promise<void> => {
   await api.delete<ApiResponse<void>>(
-    `/appointments/availability/${id}`, // <-- REMOVIDO /doctor
+    `/appointments/availability/${id}`, 
   );
 };
 

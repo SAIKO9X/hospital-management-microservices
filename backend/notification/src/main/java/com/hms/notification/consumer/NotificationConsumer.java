@@ -13,6 +13,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -37,127 +38,270 @@ public class NotificationConsumer {
 
   @RabbitListener(queues = "${application.rabbitmq.notification-queue}")
   public void consumeGenericEmail(EmailRequest request) {
-    log.info("Email genérico para: {}", request.to());
-    emailService.sendEmail(request.to(), request.subject(), request.body());
+    try {
+      log.info("Email genérico para: {}", request.to());
+      emailService.sendEmail(request.to(), request.subject(), request.body());
+    } catch (Exception e) {
+      log.error("Erro ao processar e-mail genérico para: {}", request.to(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar e-mail genérico", e);
+    }
   }
 
   @RabbitListener(queues = "${application.rabbitmq.queues.notification-reminder:notification.reminder.queue}")
   public void handleAppointmentReminder(EventEnvelope<AppointmentEvent> envelope) {
-    AppointmentEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentEvent.class);
-    log.info("Processando lembrete [Evento ID: {}] para consulta ID: {}", envelope.getEventId(), event.appointmentId());
+    try {
+      AppointmentEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentEvent.class);
+      log.info("Processando lembrete [Evento ID: {}] para consulta ID: {}", envelope.getEventId(), event.appointmentId());
 
-    String formattedDate = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
-    String shortTime = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+      String formattedDate = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
+      String shortTime = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("HH:mm"));
 
-    String subject = "Lembrete de Consulta";
-    String body = String.format("Olá %s, lembrete da consulta com Dr(a). %s em %s.",
-      event.patientName(), event.doctorName(), formattedDate);
+      String subject = "Lembrete de Consulta";
+      String body = String.format("Olá %s, lembrete da consulta com Dr(a). %s em %s.",
+        event.patientName(), event.doctorName(), formattedDate);
 
-    if (event.patientEmail() != null && !event.patientEmail().isBlank()) {
-      try {
-        emailService.sendEmail(event.patientEmail(), subject, body);
-      } catch (Exception e) {
-        log.error("Erro ao enviar email de lembrete para {}", event.patientEmail(), e);
+      if (event.patientEmail() != null && !event.patientEmail().isBlank()) {
+        try {
+          emailService.sendEmail(event.patientEmail(), subject, body);
+        } catch (Exception e) {
+          log.error("Erro ao enviar email de lembrete para {}", event.patientEmail(), e);
+        }
+      } else {
+        log.warn("E-mail não fornecido para o paciente {}. Pulando envio de e-mail de lembrete.", event.patientId());
       }
-    } else {
-      log.warn("E-mail não fornecido para o paciente {}. Pulando envio de e-mail de lembrete.", event.patientId());
-    }
 
-    saveInAppNotification(
-      event.patientId(),
-      "Consulta Amanhã",
-      "Consulta com Dr(a). " + event.doctorName() + " às " + shortTime,
-      NotificationType.APPOINTMENT_REMINDER
-    );
+      saveInAppNotification(
+        event.patientId(),
+        "Consulta Amanhã",
+        "Consulta com Dr(a). " + event.doctorName() + " às " + shortTime,
+        NotificationType.APPOINTMENT_REMINDER
+      );
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de lembrete. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar lembrete de consulta", e);
+    }
   }
 
   @RabbitListener(queues = "${application.rabbitmq.queues.notification-status:notification.status.queue}")
-  public void handleStatusChange(EventEnvelope<AppointmentStatusChangedEvent> envelope) {
-    AppointmentStatusChangedEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentStatusChangedEvent.class);
-    String formattedDate = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+  public void handleStatusChange(EventEnvelope<?> envelope) {
+    try {
+      AppointmentStatusChangedEvent event = objectMapper.convertValue(envelope.getPayload(), AppointmentStatusChangedEvent.class);
+      String formattedDate = event.appointmentDateTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
-    processPatientStatusNotification(event, formattedDate);
+      processPatientStatusNotification(event, formattedDate);
 
-    if (event.triggeredByPatient() && event.doctorId() != null) {
-      processDoctorStatusNotification(event, formattedDate);
+      if (event.triggeredByPatient() && event.doctorId() != null) {
+        processDoctorStatusNotification(event, formattedDate);
+      }
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de mudança de status. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar mudança de status", e);
     }
   }
 
   @RabbitListener(queues = RabbitMQConfig.WAITLIST_QUEUE)
   public void handleWaitlistNotification(EventEnvelope<WaitlistNotificationEvent> envelope) {
-    WaitlistNotificationEvent event = objectMapper.convertValue(envelope.getPayload(), WaitlistNotificationEvent.class);
+    try {
+      WaitlistNotificationEvent event = objectMapper.convertValue(envelope.getPayload(), WaitlistNotificationEvent.class);
 
-    // email
-    String content = "Surgiu uma vaga com Dr. " + event.doctorName() + " em " + event.availableDateTime();
-    emailService.sendEmail(event.email(), "Vaga Disponível!", content);
+      // email
+      String content = "Surgiu uma vaga com Dr. " + event.doctorName() + " em " + event.availableDateTime();
+      emailService.sendEmail(event.email(), "Vaga Disponível!", content);
 
-    // in-App
-    saveInAppNotification(
-      event.userId(),
-      "Vaga na Lista de Espera!",
-      "Uma vaga surgiu para " + event.availableDateTime() + ". Acesse para agendar.",
-      NotificationType.WAITLIST_ALERT
-    );
+      // in-App
+      saveInAppNotification(
+        event.userId(),
+        "Vaga na Lista de Espera!",
+        "Uma vaga surgiu para " + event.availableDateTime() + ". Acesse para agendar.",
+        NotificationType.WAITLIST_ALERT
+      );
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de lista de espera. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar lista de espera", e);
+    }
   }
 
   @RabbitListener(queues = "${application.rabbitmq.queues.notification-prescription:notification.prescription.queue}")
   public void handlePrescriptionIssued(EventEnvelope<PrescriptionIssuedEvent> envelope) {
-    PrescriptionIssuedEvent event = objectMapper.convertValue(envelope.getPayload(), PrescriptionIssuedEvent.class);
+    try {
+      PrescriptionIssuedEvent event = objectMapper.convertValue(envelope.getPayload(), PrescriptionIssuedEvent.class);
 
-    log.info("Nova receita [Correlation: {}] para paciente ID: {} (UserID: {})",
-      envelope.getCorrelationId(), event.patientId(), event.patientUserId());
+      log.info("Nova receita [Correlation: {}] para paciente ID: {} (UserID: {})",
+        envelope.getCorrelationId(), event.patientId(), event.patientUserId());
 
-    if (event.patientEmail() != null && !event.patientEmail().isBlank()) {
-      try {
-        String subject = "Nova Receita Médica";
-        String body = String.format("<p>Olá %s, o Dr(a). %s emitiu uma nova receita digital.</p>",
-          event.patientName(), event.doctorName());
-        emailService.sendEmail(event.patientEmail(), subject, body);
-      } catch (Exception e) {
-        log.error("Erro ao enviar email de nova receita para o paciente {}", event.patientEmail(), e);
+      if (event.patientEmail() != null && !event.patientEmail().isBlank()) {
+        try {
+          String subject = "Nova Receita Médica";
+          String body = String.format("<p>Olá %s, o Dr(a). %s emitiu uma nova receita digital.</p>",
+            event.patientName(), event.doctorName());
+          emailService.sendEmail(event.patientEmail(), subject, body);
+        } catch (Exception e) {
+          log.error("Erro ao enviar email de nova receita para o paciente {}", event.patientEmail(), e);
+        }
+      } else {
+        log.warn("E-mail não fornecido para o paciente {}. Pulando envio de e-mail.", event.patientId());
       }
-    } else {
-      log.warn("E-mail não fornecido para o paciente {}. Pulando envio de e-mail.", event.patientId());
+
+      Long recipientId = event.patientUserId() != null ? event.patientUserId() : event.patientId();
+
+      saveInAppNotification(
+        recipientId,
+        "Nova Receita",
+        "Dr(a). " + event.doctorName() + " emitiu uma receita. Acesse 'Meus Medicamentos'.",
+        NotificationType.PRESCRIPTION
+      );
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de nova receita. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar nova receita", e);
     }
-
-    Long recipientId = event.patientUserId() != null ? event.patientUserId() : event.patientId();
-
-    saveInAppNotification(
-      recipientId,
-      "Nova Receita",
-      "Dr(a). " + event.doctorName() + " emitiu uma receita. Acesse 'Meus Medicamentos'.",
-      NotificationType.PRESCRIPTION
-    );
   }
 
   @RabbitListener(queues = "${application.rabbitmq.lab-queue-name:notification.lab.completed.queue}")
   public void handleLabResult(EventEnvelope<LabOrderCompletedEvent> envelope) {
-    LabOrderCompletedEvent event = objectMapper.convertValue(envelope.getPayload(), LabOrderCompletedEvent.class);
+    try {
+      LabOrderCompletedEvent event = objectMapper.convertValue(envelope.getPayload(), LabOrderCompletedEvent.class);
 
-    log.info("Resultado de exame pronto. Pedido: {}", event.labOrderNumber());
+      log.info("Resultado de exame pronto. Pedido: {}", event.labOrderNumber());
 
-    // notificar Médico
-    if (event.doctorEmail() != null) {
-      sendLabResultEmailToDoctor(event);
+      // notificar Médico
+      if (event.doctorEmail() != null) {
+        sendLabResultEmailToDoctor(event);
 
-      Long docRecipientId = event.doctorUserId() != null ? event.doctorUserId() : event.doctorId();
+        Long docRecipientId = event.doctorUserId() != null ? event.doctorUserId() : event.doctorId();
 
-      saveInAppNotification(docRecipientId,
-        "Exame Pronto",
-        "Resultado disponível do paciente: " + event.patientName(),
-        NotificationType.LAB_RESULT);
+        saveInAppNotification(docRecipientId,
+          "Exame Pronto",
+          "Resultado disponível do paciente: " + event.patientName(),
+          NotificationType.LAB_RESULT);
+      }
+
+      // notificar Paciente
+      if (event.patientId() != null) {
+        Long patRecipientId = event.patientUserId() != null ? event.patientUserId() : event.patientId();
+
+        saveInAppNotification(
+          patRecipientId,
+          "Exame Concluído",
+          "Os resultados do pedido " + event.labOrderNumber() + " estão disponíveis.",
+          NotificationType.LAB_RESULT
+        );
+      }
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de resultado de exame. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar resultado de exame", e);
     }
+  }
 
-    // notificar Paciente
-    if (event.patientId() != null) {
-      Long patRecipientId = event.patientUserId() != null ? event.patientUserId() : event.patientId();
+  @RabbitListener(queues = "${application.rabbitmq.queues.chat-notification:notification.chat.queue}")
+  public void handleNewChatMessage(EventEnvelope<ChatMessageEvent> envelope) {
+    try {
+      ChatMessageEvent event = objectMapper.convertValue(envelope.getPayload(), ChatMessageEvent.class);
 
       saveInAppNotification(
-        patRecipientId,
-        "Exame Concluído",
-        "Os resultados do pedido " + event.labOrderNumber() + " estão disponíveis.",
-        NotificationType.LAB_RESULT
+        event.recipientId(),
+        "Nova Mensagem de " + event.senderName(),
+        event.content(),
+        NotificationType.NEW_MESSAGE
       );
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de chat. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar notificação de chat", e);
+    }
+  }
+
+  @RabbitListener(queues = "${application.rabbitmq.user-created-queue}")
+  public void consumeUserCreated(EventEnvelope<UserCreatedEvent> envelope) {
+    try {
+      UserCreatedEvent event = objectMapper.convertValue(envelope.getPayload(), UserCreatedEvent.class);
+
+      String subject = "Bem-vindo ao HMS";
+      String content = String.format("<h1>Código: %s</h1><p>Use este código para ativar sua conta.</p>", event.verificationCode());
+      emailService.sendEmail(event.email(), subject, content);
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de usuário criado. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar criação de usuário", e);
+    }
+  }
+
+  @RabbitListener(queues = RabbitMQConfig.STOCK_LOW_QUEUE)
+  public void handleLowStockEvent(EventEnvelope<StockLowEvent> envelope) {
+    try {
+      StockLowEvent event = objectMapper.convertValue(envelope.getPayload(), StockLowEvent.class);
+
+      log.info("Recebido alerta de stock baixo para o medicamento: {}", event.medicineName());
+
+      Notification notification = new Notification();
+      notification.setRecipientId("ADMIN");
+      notification.setTitle("Alerta de Stock Baixo");
+      notification.setMessage(String.format("O medicamento %s atingiu níveis críticos. Restam apenas %d unidades (Limite: %d).",
+        event.medicineName(), event.currentQuantity(), event.threshold()));
+      notification.setType(NotificationType.LOW_STOCK);
+
+      notificationService.sendNotification(notification);
+    } catch (Exception e) {
+      log.error("Erro ao processar alerta de estoque baixo. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar alerta de estoque", e);
+    }
+  }
+
+  @RabbitListener(bindings = @org.springframework.amqp.rabbit.annotation.QueueBinding(
+    value = @org.springframework.amqp.rabbit.annotation.Queue(value = "${application.rabbitmq.notification-review:notification.review.queue}", durable = "true"),
+    exchange = @org.springframework.amqp.rabbit.annotation.Exchange(value = "internal.exchange", type = "topic"),
+    key = "notification.review.alert"
+  ))
+  public void handleNewReview(EventEnvelope<ReviewNotificationEvent> envelope) {
+    try {
+      ReviewNotificationEvent event = objectMapper.convertValue(envelope.getPayload(), ReviewNotificationEvent.class);
+
+      log.info("Nova avaliação recebida para médico ID: {}", event.doctorId());
+
+      String message = String.format("O paciente %s avaliou seu atendimento com %d estrela(s).", event.patientName(), event.rating());
+      if (event.comment() != null && !event.comment().isBlank()) {
+        message += " Comentário: \"" + event.comment() + "\"";
+      }
+
+      saveInAppNotification(
+        event.doctorId(),
+        "Nova Avaliação Recebida",
+        message,
+        NotificationType.NEW_REVIEW
+      );
+    } catch (Exception e) {
+      log.error("Erro ao processar notificação de nova avaliação. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar avaliação", e);
+    }
+  }
+
+  @RabbitListener(queues = "${application.rabbitmq.queues.password-reset:notification.password.reset.queue}")
+  public void handlePasswordReset(EventEnvelope<PasswordResetEvent> envelope) {
+    try {
+      PasswordResetEvent event = objectMapper.convertValue(envelope.getPayload(), PasswordResetEvent.class);
+      log.info("Processando envio de e-mail de redefinição de senha para: {}", event.email());
+
+      try {
+        Context context = new Context();
+        context.setVariable("userName", event.userName());
+        context.setVariable("resetLink", event.resetLink());
+        context.setVariable("expirationMinutes", event.expirationMinutes());
+
+        String htmlBody = templateEngine.process("password-reset-email", context);
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+        helper.setTo(event.email());
+        helper.setSubject("Redefinição de Senha - HMS");
+        helper.setText(htmlBody, true);
+        helper.setFrom("sistema@hms.com");
+
+        mailSender.send(message);
+        log.info("E-mail de redefinição enviado com sucesso para: {}", event.email());
+
+      } catch (MessagingException e) {
+        log.error("Erro ao enviar e-mail de redefinição de senha", e);
+      }
+    } catch (Exception e) {
+      log.error("Erro ao processar evento de redefinição de senha. EventId: {}", envelope.getEventId(), e);
+      throw new AmqpRejectAndDontRequeueException("Erro ao processar redefinição de senha", e);
     }
   }
 
@@ -203,99 +347,15 @@ public class NotificationConsumer {
         title = "Reagendamento de Paciente";
         message = "O paciente " + event.patientName() + " solicitou reagendamento para " + formattedDate;
       }
+      case "SCHEDULED" -> {
+        title = "Nova Consulta Agendada";
+        message = "O paciente " + event.patientName() + " agendou uma nova consulta para " + formattedDate;
+      }
     }
 
     if (!title.isEmpty()) {
       Long recipientId = event.doctorUserId() != null ? event.doctorUserId() : event.doctorId();
       saveInAppNotification(recipientId, title, message, NotificationType.SYSTEM_ALERT);
-    }
-  }
-
-  @RabbitListener(queues = "${application.rabbitmq.queues.chat-notification:notification.chat.queue}")
-  public void handleNewChatMessage(EventEnvelope<ChatMessageEvent> envelope) {
-    ChatMessageEvent event = objectMapper.convertValue(envelope.getPayload(), ChatMessageEvent.class);
-
-    saveInAppNotification(
-      event.recipientId(),
-      "Nova Mensagem de " + event.senderName(),
-      event.content(),
-      NotificationType.NEW_MESSAGE
-    );
-  }
-
-  @RabbitListener(queues = "${application.rabbitmq.user-created-queue}")
-  public void consumeUserCreated(EventEnvelope<UserCreatedEvent> envelope) {
-    UserCreatedEvent event = objectMapper.convertValue(envelope.getPayload(), UserCreatedEvent.class);
-
-    String subject = "Bem-vindo ao HMS";
-    String content = String.format("<h1>Código: %s</h1><p>Use este código para ativar sua conta.</p>", event.verificationCode());
-    emailService.sendEmail(event.email(), subject, content);
-  }
-
-  @RabbitListener(queues = RabbitMQConfig.STOCK_LOW_QUEUE)
-  public void handleLowStockEvent(EventEnvelope<StockLowEvent> envelope) {
-    StockLowEvent event = objectMapper.convertValue(envelope.getPayload(), StockLowEvent.class);
-
-    log.info("Recebido alerta de stock baixo para o medicamento: {}", event.medicineName());
-
-    Notification notification = new Notification();
-    notification.setRecipientId("ADMIN");
-    notification.setTitle("Alerta de Stock Baixo");
-    notification.setMessage(String.format("O medicamento %s atingiu níveis críticos. Restam apenas %d unidades (Limite: %d).",
-      event.medicineName(), event.currentQuantity(), event.threshold()));
-    notification.setType(NotificationType.LOW_STOCK);
-
-    notificationService.sendNotification(notification);
-  }
-
-  @RabbitListener(bindings = @org.springframework.amqp.rabbit.annotation.QueueBinding(
-    value = @org.springframework.amqp.rabbit.annotation.Queue(value = "${application.rabbitmq.notification-review:notification.review.queue}", durable = "true"),
-    exchange = @org.springframework.amqp.rabbit.annotation.Exchange(value = "internal.exchange", type = "topic"),
-    key = "notification.review.alert"
-  ))
-  public void handleNewReview(EventEnvelope<ReviewNotificationEvent> envelope) {
-    ReviewNotificationEvent event = objectMapper.convertValue(envelope.getPayload(), ReviewNotificationEvent.class);
-
-    log.info("Nova avaliação recebida para médico ID: {}", event.doctorId());
-
-    String message = String.format("O paciente %s avaliou seu atendimento com %d estrela(s).", event.patientName(), event.rating());
-    if (event.comment() != null && !event.comment().isBlank()) {
-      message += " Comentário: \"" + event.comment() + "\"";
-    }
-
-    saveInAppNotification(
-      event.doctorId(),
-      "Nova Avaliação Recebida",
-      message,
-      NotificationType.NEW_REVIEW
-    );
-  }
-
-  @RabbitListener(queues = "${application.rabbitmq.queues.password-reset:notification.password.reset.queue}")
-  public void handlePasswordReset(EventEnvelope<PasswordResetEvent> envelope) {
-    PasswordResetEvent event = objectMapper.convertValue(envelope.getPayload(), PasswordResetEvent.class);
-    log.info("Processando envio de e-mail de redefinição de senha para: {}", event.email());
-
-    try {
-      Context context = new Context();
-      context.setVariable("userName", event.userName());
-      context.setVariable("resetLink", event.resetLink());
-      context.setVariable("expirationMinutes", event.expirationMinutes());
-
-      String htmlBody = templateEngine.process("password-reset-email", context);
-
-      MimeMessage message = mailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
-      helper.setTo(event.email());
-      helper.setSubject("Redefinição de Senha - HMS");
-      helper.setText(htmlBody, true);
-      helper.setFrom("sistema@hms.com");
-
-      mailSender.send(message);
-      log.info("E-mail de redefinição enviado com sucesso para: {}", event.email());
-
-    } catch (MessagingException e) {
-      log.error("Erro ao enviar e-mail de redefinição de senha", e);
     }
   }
 

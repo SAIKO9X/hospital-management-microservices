@@ -67,6 +67,16 @@ public class AppointmentServiceImpl implements AppointmentService {
   private final OutboxEventRepository outboxEventRepository;
   private final ObjectMapper objectMapper;
 
+  private static final Map<String, List<String>> PATIENT_GROUPS = Map.of(
+    "Diabéticos", List.of("diabetes", "diabético", "glicemia", "insulina"),
+    "Hipertensos", List.of("hipertensão", "pressão alta", "has", "pressão arterial"),
+    "Cardiopatas", List.of("cardíaco", "cardiopatia", "infarto", "arritmia", "taquicardia"),
+    "Respiratórios", List.of("asma", "bronquite", "dpoc", "falta de ar", "pneumonia"),
+    "Ortopédicos", List.of("artrose", "fratura", "dor lombar", "ortopédico", "lesão", "gonartrose"),
+    "Neurológicos", List.of("enxaqueca", "cefaleia", "epilepsia", "avc", "neurológico"),
+    "Dermatológicos", List.of("dermatite", "acne", "psoríase", "alergia cutânea")
+  );
+
   @Autowired
   @Lazy
   private AppointmentService self;
@@ -392,13 +402,7 @@ public class AppointmentServiceImpl implements AppointmentService {
   public List<PatientGroupResponse> getPatientGroupsForDoctor(Long userId) {
     Long doctorId = resolveDoctorId(userId);
 
-    var groups = Map.of(
-      "Diabéticos", List.of("diabetes", "diabético", "glicemia"),
-      "Hipertensos", List.of("hipertensão", "pressão alta", "has"),
-      "Cardíacos", List.of("cardíaco", "cardiopatia", "infarto")
-    );
-
-    return groups.entrySet().stream()
+    return PATIENT_GROUPS.entrySet().stream()
       .map(entry -> {
         Set<Long> ids = new HashSet<>();
         entry.getValue().forEach(k ->

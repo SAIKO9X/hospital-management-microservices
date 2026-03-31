@@ -10,30 +10,65 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format, parseISO } from "date-fns";
+import {
+  format,
+  parseISO,
+  isToday,
+  isThisWeek,
+  isThisMonth,
+  isSameMonth,
+  addMonths,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Link } from "react-router";
 import { Calendar, Clock } from "lucide-react";
 import type { AppointmentDetail } from "@/types/appointment.types";
 
-type FilterType = "today" | "week" | "month";
+type FilterType = "today" | "week" | "month" | "nextMonth";
 
 export function UpcomingAppointments() {
   const [filter, setFilter] = useState<FilterType>("month");
-  const { data: appointments, isLoading } = useDoctorAppointmentDetails(filter);
+
+  const { data: appointments, isLoading } = useDoctorAppointmentDetails();
 
   const upcomingAppointments =
     appointments
-      ?.filter((app) => app.status === "SCHEDULED")
+      ?.filter((app) => {
+        if (app.status !== "SCHEDULED") return false;
+
+        const appDate = parseISO(app.appointmentDateTime);
+        const today = new Date();
+
+        if (filter === "today") {
+          return isToday(appDate);
+        }
+
+        if (filter === "week") {
+          return isThisWeek(appDate, { weekStartsOn: 1 });
+        }
+
+        if (filter === "month") {
+          return isThisMonth(appDate);
+        }
+
+        if (filter === "nextMonth") {
+          const nextMonthDate = addMonths(today, 1);
+          return isSameMonth(appDate, nextMonthDate);
+        }
+
+        return true;
+      })
       .sort(
         (a, b) =>
           parseISO(a.appointmentDateTime).getTime() -
-          parseISO(b.appointmentDateTime).getTime()
+          parseISO(b.appointmentDateTime).getTime(),
       ) || [];
 
   const filterConfig = {
     today: { title: "Hoje", description: "para hoje" },
     week: { title: "Esta Semana", description: "para esta semana" },
     month: { title: "Este Mês", description: "para este mês" },
+    nextMonth: { title: "Próx. Mês", description: "para o próximo mês" },
   };
 
   return (
@@ -48,19 +83,21 @@ export function UpcomingAppointments() {
             </CardDescription>
           </div>
           <div className="flex gap-1 bg-muted p-1 rounded-lg">
-            {(["today", "week", "month"] as FilterType[]).map((label) => (
-              <button
-                key={label}
-                onClick={() => setFilter(label)}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
-                  filter === label
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/50"
-                }`}
-              >
-                {filterConfig[label].title}
-              </button>
-            ))}
+            {(["today", "week", "month", "nextMonth"] as FilterType[]).map(
+              (label) => (
+                <button
+                  key={label}
+                  onClick={() => setFilter(label)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                    filter === label
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-background/50"
+                  }`}
+                >
+                  {filterConfig[label].title}
+                </button>
+              ),
+            )}
           </div>
         </div>
       </CardHeader>
@@ -90,7 +127,8 @@ export function UpcomingAppointments() {
                       <Clock className="h-3 w-3" />
                       {format(
                         parseISO(app.appointmentDateTime),
-                        "dd/MM 'às' HH:mm"
+                        "dd/MM 'às' HH:mm",
+                        { locale: ptBR },
                       )}
                     </p>
                   </div>

@@ -1,5 +1,6 @@
 package com.hms.notification.consumer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hms.common.dto.event.EventEnvelope;
 import com.hms.notification.dto.event.AppointmentStatusChangedEvent;
 import com.hms.notification.dto.event.StockLowEvent;
@@ -10,10 +11,7 @@ import com.hms.notification.services.NotificationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -39,6 +37,10 @@ class NotificationConsumerTest {
 
   @Mock
   private NotificationService notificationService;
+
+  // findAndRegisterModules() garante que suporte a LocalDateTime (JavaTimeModule) seja ativado.
+  @Spy
+  private ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @InjectMocks
   private NotificationConsumer consumer;

@@ -201,7 +201,7 @@ INSERT IGNORE INTO reviews (
 
     -- Dra. Ana Paula (id=3) - Pediatria
     (3, 3, 3, 4, 'Dra. Ana Paula foi muito atenciosa com meu filho. O tratamento para a febre foi eficaz e ela explicou muito bem os cuidados em casa.', '2026-02-21 09:00:00'),
-    (3, 4, 10, 5, 'Trouxe minha filha recém-nascida e a doutora foi super carinhosa e paciente com nós, pais de primeira viagem. Recomendo muito!', '2026-03-01 13:00:00'),
+    (3, 4, 10, 5, 'Trouxe minha filha recém-nascida e a doutora foi super carin hosa e paciente com nós, pais de primeira viagem. Recomendo muito!', '2026-03-01 13:00:00'),
     (3, 9, 11, 5, 'A melhor pediatra que já fomos. O ambiente é acolhedor e o tratamento é extremamente humanizado.', '2026-03-20 15:10:00'),
 
     -- Dr. Roberto (id=4) - Ortopedia
@@ -213,6 +213,8 @@ INSERT IGNORE INTO reviews (
     (5, 5, 5, 5, 'Incrível! A Dra. Mariana identificou rapidamente o problema de pele e indicou o tratamento certo. Já estou muito melhor.', '2026-03-02 16:00:00'),
     (5, 7, 15, 5, 'Os manipulados que ela receitou para o controle da acne fizeram efeito na primeira semana! Profissional muito atualizada.', '2026-03-12 08:30:00'),
     (5, 2, 16, 4, 'A consulta médica foi muito boa, ela analisou bem meu caso de dermatite. Tive um pequeno problema com o sistema de agendamento, mas a doutora compensou.', '2026-03-22 17:00:00'),
+    (5, 9, 22, 5, 'Melhor dermatologista! Comecei o tratamento para acne e ela me explicou todos os efeitos colaterais com muita paciência. Recomendo de olhos fechados!', '2026-03-25 18:00:00'),
+    (5, 8, 23, 5, 'Sofro com psoríase há anos e a Dra. Mariana foi a única que me passou um tratamento que aliviou a descamação na primeira semana.', '2026-03-08 10:30:00'),
 
     -- Dr. Paulo (id=6) - Neurologia
     (6, 6, 17, 5, 'Sofro de enxaqueca crônica há anos e, depois de passar por vários médicos, finalmente o Dr. Paulo acertou o meu tratamento profilático.', '2026-02-18 09:20:00'),

@@ -12,9 +12,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/utils/utils";
 import { DollarSign, Clock, CheckCircle } from "lucide-react";
-import type { Invoice } from "@/types/billing.types";
+import type { Invoice, InvoiceStatus } from "@/types/billing.types";
 import { BillingService } from "@/services";
 import { StatCard } from "@/components/shared/StatCard";
+
+const INVOICE_STATUS_MAP: Record<
+  InvoiceStatus,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  PAID: { label: "Pago", variant: "default" },
+  PENDING: { label: "Pendente", variant: "secondary" },
+  INSURANCE_PENDING: { label: "Aguardando Convênio", variant: "outline" },
+  CANCELLED: { label: "Cancelado", variant: "destructive" },
+};
 
 export default function DoctorFinancePage() {
   const { user } = useAuth();
@@ -101,30 +114,42 @@ export default function DoctorFinancePage() {
             <TableBody>
               {invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Nenhum registro.
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    Nenhum registro financeiro encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell>
-                      {new Date(inv.issuedAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>{formatCurrency(inv.totalAmount)}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatCurrency(inv.insuranceCovered)}
-                    </TableCell>
-                    <TableCell>{formatCurrency(inv.patientPayable)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={inv.status === "PAID" ? "default" : "outline"}
-                      >
-                        {inv.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
+                invoices.map((inv) => {
+                  const statusConfig = INVOICE_STATUS_MAP[inv.status] || {
+                    label: inv.status,
+                    variant: "outline",
+                  };
+
+                  return (
+                    <TableRow key={inv.id}>
+                      <TableCell>
+                        {new Date(inv.issuedAt).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {formatCurrency(inv.totalAmount)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatCurrency(inv.insuranceCovered)}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(inv.patientPayable)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig.variant}>
+                          {statusConfig.label}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

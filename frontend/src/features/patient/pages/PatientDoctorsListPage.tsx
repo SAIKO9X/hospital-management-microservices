@@ -32,7 +32,10 @@ export const PatientDoctorsListPage = () => {
     const specs = doctors?.content
       ?.map((d) => d.specialization)
       .filter(Boolean) as string[];
-    return [...new Set(specs)].sort();
+
+    return [...new Set(specs)].sort((a, b) =>
+      a.localeCompare(b, "pt-BR", { sensitivity: "base" }),
+    );
   }, [doctors]);
 
   const filteredDoctors = useMemo(() => {

@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://github.com/saiko9x/hms-fullstack-microservices/actions"><img src="https://img.shields.io/github/actions/workflow/status/saiko9x/hms-fullstack-microservices/ci.yml?branch=main&style=for-the-badge&logo=github&label=Build"/></a>
+<a href="https://github.com/SAIKO9X/hospital-management-microservices/actions"><img src="https://img.shields.io/github/actions/workflow/status/saiko9x/hospital-management-microservices/ci.yml?branch=main&style=for-the-badge&logo=github&label=Build"/></a>
 <img src="https://img.shields.io/badge/Java-17+-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white"/>
 <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white"/>
 <img src="https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=for-the-badge&logo=spring&logoColor=white"/>
@@ -12,7 +12,7 @@
 
 **Plataforma fullstack de gestão hospitalar e clínica construída com Arquitetura de Microsserviços**
 
-*Autenticação · Agendamentos · Farmácia · Faturamento · Chat · Auditoria*
+_Autenticação · Agendamentos · Farmácia · Faturamento · Chat · Auditoria_
 
 </div>
 
@@ -152,7 +152,7 @@ pelos serviços de Notificação e Auditoria. Cada serviço possui seu próprio 
 ## ✨ Funcionalidades
 
 | Módulo                            | Descrição                                                          |
-|-----------------------------------|--------------------------------------------------------------------|
+| --------------------------------- | ------------------------------------------------------------------ |
 | 🔐 **Autenticação & Autorização** | Gestão segura de acessos com JWT e Spring Security.                |
 | 👤 **Gestão de Perfis**           | Cadastros e históricos para Pacientes, Médicos e Administradores.  |
 | 📅 **Agendamentos**               | Marcação de consultas, controle de disponibilidade e telemedicina. |
@@ -195,7 +195,7 @@ pelos serviços de Notificação e Auditoria. Cada serviço possui seu próprio 
 ## 📁 Estrutura do Projeto
 
 ```text
-hms-fullstack-microservices/
+hospital-management-microservices/
 ├── backend/
 │   ├── appointment/          # Gestão de consultas e histórico médico
 │   ├── audit/                # Trilha de auditoria do sistema
@@ -225,7 +225,7 @@ hms-fullstack-microservices/
 ### Pré-requisitos
 
 | Ferramenta         | Versão Mínima | Link                                                 |
-|:-------------------|:--------------|:-----------------------------------------------------|
+| :----------------- | :------------ | :--------------------------------------------------- |
 | **Java**           | 17+           | [Download](https://adoptium.net/)                    |
 | **Node.js**        | 18+ (LTS)     | [Download](https://nodejs.org/)                      |
 | **pnpm**           | 8+            | [Download](https://pnpm.io/)                         |
@@ -235,8 +235,8 @@ hms-fullstack-microservices/
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/saiko9x/hms-fullstack-microservices.git
-cd hms-fullstack-microservices
+git clone [https://github.com/SAIKO9X/hospital-management-microservices.git](https://github.com/SAIKO9X/hospital-management-microservices.git)
+cd hospital-management-microservices
 ```
 
 ### 2. Configuração de Variáveis de Ambiente
@@ -251,7 +251,7 @@ cp .env.example .env
 Abra o arquivo `.env` gerado e configure as seguintes variáveis críticas:
 
 | Variável                      | Descrição                                                                               |
-|:------------------------------|:----------------------------------------------------------------------------------------|
+| :---------------------------- | :-------------------------------------------------------------------------------------- |
 | `JWT_SECRET`                  | Chave secreta para assinar os tokens de autenticação (gere uma string aleatória longa). |
 | `MYSQL_PASSWORD`              | Credenciais do banco de dados para os microsserviços.                                   |
 | `RABBITMQ_DEFAULT_PASS`       | Senha do broker de mensageria.                                                          |
@@ -320,20 +320,20 @@ etc.) para que o sistema já venha pronto para uso.
 Você pode fazer login na interface com as seguintes credenciais padrão:
 
 | Perfil                 | E-mail de Acesso  | Senha       |
-|:-----------------------|:------------------|:------------|
+| :--------------------- | :---------------- | :---------- |
 | **Administrador**      | `admin@hms.com`   | `Admin@123` |
 | **Médico (Exemplo)**   | `doctor@hms.com`  | `Admin@123` |
 | **Paciente (Exemplo)** | `patient@hms.com` | `Admin@123` |
 
-> *Outros médicos e pacientes também estão disponíveis no banco. Veja o script `V2__seed_users.sql` no User Service
-> para a lista completa.*
+> _Outros médicos e pacientes também estão disponíveis no banco. Veja o script `V2__seed_users.sql` no User Service
+> para a lista completa._
 
 ---
 
 ## 🌐 Endpoints e Dashboards
 
 | Recurso / Serviço                | URL Local                               | Credenciais Padrão            |
-|:---------------------------------|:----------------------------------------|:------------------------------|
+| :------------------------------- | :-------------------------------------- | :---------------------------- |
 | **Frontend (Aplicação)**         | `http://localhost:5173`                 | Ver seção de Seeds acima      |
 | **API Gateway**                  | `http://localhost:9000`                 | —                             |
 | **Eureka Server Dashboard**      | `http://localhost:8761`                 | —                             |
@@ -361,7 +361,7 @@ Contribuições são muito bem-vindas! Siga os passos abaixo:
 
 ## 👨‍💻 Autor
 
-Desenvolvido por **[Seu Nome]**
+Desenvolvido por **Carlos Eduardo**
 
 Sinta-se à vontade para entrar em contato ou acompanhar outros projetos:
 
